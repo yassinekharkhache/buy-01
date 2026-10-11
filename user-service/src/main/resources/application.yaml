@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: user-service
+
+jwt:
+  public-key-path: ${JWT_PUBLIC_KEY}
+  private-key-path: ${JWT_PRIVATE_KEY}
