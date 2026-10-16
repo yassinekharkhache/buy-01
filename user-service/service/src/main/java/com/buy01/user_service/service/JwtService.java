@@ -91,6 +91,10 @@ public class JwtService {
     }
 
     public boolean isTokenValid(String token, User user) {
-        return extractUsername(token).equals(user.getUsername());
+        Claims all_Claims = extractAllClaims(token);
+        boolean is_same_name = all_Claims.getSubject().equals(user.getUsername());
+        boolean is_not_expired = all_Claims.getExpiration().after(new Date());
+        boolean is_same_id = all_Claims.get("userID", String.class).equals(user.getId());
+        return is_same_name && is_not_expired && is_same_id;
     }
 }

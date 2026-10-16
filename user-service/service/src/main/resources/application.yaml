@@ -1,6 +1,8 @@
 spring:
   application:
     name: user-service
+  mongodb:
+    uri: mongodb://rootuser:rootpass@localhost:27017/user_service?authSource=admin
 
 jwt:
   public-key-path: ${JWT_PUBLIC_KEY}
