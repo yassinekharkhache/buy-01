@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: product-service
+
+  mongodb:
+    uri: mongodb://rootuser:rootpass@localhost:27018/product_service?authSource=admin
+
+jwt:
+  public-key-path: file:${JWT_PUBLIC_KEY}
+
+server:
+  port: 8801

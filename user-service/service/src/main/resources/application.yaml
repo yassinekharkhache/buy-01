@@ -4,6 +4,10 @@ spring:
   mongodb:
     uri: mongodb://rootuser:rootpass@localhost:27017/user_service?authSource=admin
 
+# port: 8800
+server:
+  port: 8800
+
 jwt:
   public-key-path: ${JWT_PUBLIC_KEY}
   private-key-path: ${JWT_PRIVATE_KEY}

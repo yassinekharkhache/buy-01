@@ -3,8 +3,6 @@ package com.buy01.user_service.dto;
 import com.buy01.user_service.model.Role;
 
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -13,8 +11,7 @@ import jakarta.validation.constraints.Size;
 public record RegisterDto(
 
     @NotBlank(message = "Name is required")
-    @Min(value = 6, message = "Name must be at least 6 characters long")
-    @Max(value = 40, message = "Name must not exceed 40 characters")
+    @Size(min = 3, max = 70, message = "Name must be between 3 and 70 characters")
     @Pattern(regexp = "^[A-Za-z_]+$", message = "Username should contain only letters or underscores")
     String name,
 

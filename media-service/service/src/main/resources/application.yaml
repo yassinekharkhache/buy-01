@@ -1,0 +1,21 @@
+server:
+  port: 8802
+  error:
+    include-message: always
+
+spring:
+  application:
+    name: media-service
+  mongodb:
+    uri: mongodb://rootuser:rootpass@localhost:27019/media_service?authSource=admin
+  data:
+    mongodb:
+      auto-index-creation: true
+  web:
+    error:
+      include-message: always
+      include-binding-errors: always
+
+jwt:
+  public-key-path: file:${JWT_PUBLIC_KEY}
+

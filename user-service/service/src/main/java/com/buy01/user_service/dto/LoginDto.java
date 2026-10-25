@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Size;
 
 public record LoginDto(
     @Size(max = 20, message = "username must not exceed 20 characters")
-    String username,
+    String name,
     
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password must be at least 6 characters long")

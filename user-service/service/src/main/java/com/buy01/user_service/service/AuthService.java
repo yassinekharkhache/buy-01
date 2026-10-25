@@ -8,8 +8,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.buy01.user_service.repository.UserRepository;
 import com.buy01.user_service.dto.LoginDto;
 import com.buy01.user_service.dto.RegisterDto;
-import com.buy01.user_service.dto.UpdateUserDto;
-import com.buy01.user_service.dto.UserResponse;
 import com.buy01.user_service.exception.EmailAlreadyExistsException;
 import com.buy01.user_service.exception.InvalidCredentialsException;
 import com.buy01.user_service.exception.InvalidRoleException;
@@ -47,7 +45,7 @@ public class AuthService {
     }
 
     public String login(LoginDto data) {
-        Optional<User> userOptional = userRepository.findByName(data.username());
+        Optional<User> userOptional = userRepository.findByName(data.name());
         if (userOptional.isEmpty()) {
             throw new InvalidCredentialsException("Invalid username or password");
         }

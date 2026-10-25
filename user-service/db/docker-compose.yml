@@ -6,12 +6,12 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - data:/data/db
+      - user_data:/data/db
     environment:
       MONGO_INITDB_ROOT_USERNAME: rootuser
       MONGO_INITDB_ROOT_PASSWORD: rootpass
     networks:
-      - mongodb_network
+      - mongodb_network_user_service
 
   mongo-express:
     image: mongo-express:latest
@@ -30,11 +30,11 @@ services:
       ME_CONFIG_BASICAUTH_USERNAME: rootuser
       ME_CONFIG_BASICAUTH_PASSWORD: rootpass
     networks:
-      - mongodb_network
+      - mongodb_network_user_service
 
 volumes:
-  data:
+  user_data:
 
 networks:
-  mongodb_network:
-    name: mongodb_network
+  mongodb_network_user_service:
+    name: mongodb_network_user_service
