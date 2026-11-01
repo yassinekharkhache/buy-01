@@ -5,11 +5,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.List;
 
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.buy01.media_service.kafka.dto.ProductCreatedEvent;
 import com.buy01.media_service.model.SessionStatus;
@@ -48,70 +46,70 @@ public void consume(ProductCreatedEvent event) {
                 .orElseThrow(() -> new IllegalStateException(
                     "Upload session not found: " + event.uploadSessionId()
                 ));
-            
+
         // Validate ownership
         if (!event.userId().equals(session.getOwnerId())) {
             throw new IllegalArgumentException("Session owner mismatch");
         }
-    
+
         // Validate expiration
         if (session.getExpiresAt() == null ||
             session.getExpiresAt() < System.currentTimeMillis()) {
             throw new IllegalStateException("Upload session expired");
         }
-    
+
         var mediaItems = mediaRepository.findBySessionId(
                 event.uploadSessionId()
         );
-    
+
         Path destinationDir = productMedia
                 .resolve(event.productId())
                 .normalize();
-    
+
         if (!destinationDir.startsWith(productMedia)) {
             throw new IllegalArgumentException("Invalid product ID");
         }
-    
+
         try {
             Files.createDirectories(destinationDir);
-        
+
             for (var media : mediaItems) {
-            
+
                 if (media.getStatus() != SessionStatus.COMPLETED) {
                     throw new IllegalStateException(
                         "Media is not completed: " + media.getId()
                     );
                 }
-            
+
                 Path source = tmp.resolve(media.getId()).normalize();
-            
+
                 Path destination = destinationDir
                         .resolve(media.getId())
                         .normalize();
-            
+
                 if (!source.startsWith(tmp) ||
                     !destination.startsWith(destinationDir)) {
                     throw new SecurityException("Invalid media filename");
                 }
-            
+
                 // Idempotency: handle an already-moved file
                 if (!Files.exists(destination)) {
                     Files.move(source, destination);
                 }
-            
+
                 // Update MongoDB only after file is available
                 media.setObjectKey(
                     event.productId() + "/" + media.getId()
                 );
-            
+
                 media.setProductId(event.productId());
-            
+
                 mediaRepository.save(media);
             }
-        
+
             // Delete session only after successful processing
             sessionRepository.deleteById(event.uploadSessionId());
-        
+
         } catch (IOException e) {
             throw new RuntimeException(
                 "Failed to process product media for product: "
