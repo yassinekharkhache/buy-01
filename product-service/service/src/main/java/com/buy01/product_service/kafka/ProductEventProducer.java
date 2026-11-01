@@ -16,6 +16,6 @@ public class ProductEventProducer {
 
     public void publishProductCreated(ProductCreatedEvent event) {
         // Use productId as the Kafka key
-        kafkaTemplate.send("product-created", event.productId(), event.userId(),event.uploadSessionId() );
+        kafkaTemplate.send("product-created", event);
     }
 }
