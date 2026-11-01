@@ -197,48 +197,7 @@ public class MediaService {
 
     // commitUploadSession
     public void commitUploadSession(String sessionId, String ownerId,String productId) {
-        UploadSession session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Upload session not found"));
-
-        if (!ownerId.equals(session.getOwnerId())) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "You do not own this upload session");
-        }
-
-        if (session.getExpiresAt() == null || session.getExpiresAt() < System.currentTimeMillis()) {
-            throw new ResponseStatusException(
-                    HttpStatus.GONE,
-                    "Upload session has expired");
-        }
-
-        List<Media> mediaItems = mediaRepository.findBySessionId(sessionId);
-
-
-        // Move images from tmp to productMedia/{productId}/
-        mediaItems.forEach(media -> {
-            if (media.getStatus() == SessionStatus.COMPLETED) {
-                Path source = tmp.resolve(media.getId());
-                Path destinationDir = productMedia.resolve(productId);
-                Path destination = destinationDir.resolve(media.getId());
-
-                try {
-                    Files.createDirectories(destinationDir);
-                    Files.move(source, destination);
-                } catch (IOException e) {
-                    throw new RuntimeException(
-                            "Failed to finalize image: " + media.getId(), e);
-                }
-            }
-            media.setObjectKey(productId + "/" + media.getId());
-            media.setProductId(productId);
-            mediaRepository.save(media);
-        });
-        // boolean allCompleted = mediaItems.stream().allMatch(media -> SessionStatus.COMPLETED.equals(media.getStatus()));
         
-        sessionRepository.deleteById(sessionId);
     }
 
     public boolean imageExists(String name) {
