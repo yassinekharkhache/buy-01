@@ -1,0 +1,36 @@
+<div class="region" aria-live="polite">
+  @for (item of service.items(); track item.id) {
+    <div
+      class="snack"
+      [class]="'snack type-' + item.type"
+      [attr.role]="item.type === 'error' ? 'alert' : 'status'"
+      animate.enter="snack-enter"
+      animate.leave="snack-leave"
+    >
+      <span class="badge" aria-hidden="true">{{ glyphs[item.type] }}</span>
+
+      <p class="message">{{ item.message }}</p>
+
+      @if (item.actionLabel) {
+        <button type="button" class="action" (click)="service.runAction(item)">
+          {{ item.actionLabel }}
+        </button>
+      }
+
+      <button
+        type="button"
+        class="close"
+        aria-label="Dismiss notification"
+        (click)="service.dismiss(item.id)"
+      >
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none" />
+        </svg>
+      </button>
+
+      @if (item.duration > 0) {
+        <span class="timer" [style.animation-duration.ms]="item.duration" aria-hidden="true"></span>
+      }
+    </div>
+  }
+</div>

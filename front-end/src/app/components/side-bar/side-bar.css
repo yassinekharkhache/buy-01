@@ -1,0 +1,255 @@
+:host {
+  --brand: rgb(0, 119, 181);
+  --white: rgb(255, 255, 255);
+
+  position: sticky;
+  top: 0;
+  display: block;
+  flex: none;
+  height: 100vh;
+  box-sizing: border-box;
+  padding: 1rem;
+  font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  color: var(--white);
+  
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 17rem;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 1rem 0.75rem;
+  border-radius: 1.75rem;
+  /* Blue-tinted glass: readable on white pages and on busy backgrounds */
+  background: rgba(0, 119, 181, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: blur(40px) saturate(140%);
+  backdrop-filter: blur(40px) saturate(140%);
+  box-shadow:
+    0 1.5rem 3rem rgba(0, 119, 181, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition: width 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  overflow: hidden;
+}
+
+.panel.collapsed {
+  width: 4.5rem;
+  padding-inline: 0.5rem;
+}
+
+/* ---------- header ---------- */
+.head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.25rem;
+  min-height: 2.75rem;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: var(--white);
+  color: var(--brand);
+  font-weight: 800;
+}
+
+.who {
+  display: grid;
+  gap: 0.15rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.name,
+.email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.name {
+  font-weight: 700;
+}
+
+.email {
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
+.role-chip {
+  justify-self: start;
+  margin-top: 0.2rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.toggle {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--white);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.toggle svg {
+  transition: transform 0.25s ease;
+}
+
+.toggle:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.collapsed .head {
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.collapsed .toggle {
+  margin-left: 0;
+}
+
+.collapsed .toggle svg {
+  transform: rotate(180deg);
+}
+
+/* ---------- navigation ---------- */
+.nav {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.list {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.spacer {
+  flex: 1;
+  min-height: 1rem;
+}
+
+.group-title {
+  margin: 0 0 0.5rem 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.7rem 0.75rem;
+  border: 0;
+  border-radius: 0.95rem;
+  background: transparent;
+  color: var(--white);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.link:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Active = solid white + blue, same inversion as tabs and primary buttons */
+.link.active {
+  background: var(--white);
+  color: var(--brand);
+}
+
+.collapsed .link {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.icon {
+  flex: none;
+  width: 1.375rem;
+  height: 1.375rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.link:focus-visible,
+.toggle:focus-visible {
+  outline: 2px solid var(--white);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .panel {
+    background: rgba(0, 119, 181, 0.94);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .toggle svg,
+  .link {
+    transition: none;
+  }
+}
+
+@media (max-width: 48rem) {
+  :host {
+    padding: 0.5rem;
+  }
+  .panel {
+    width: 15rem;
+  }
+}

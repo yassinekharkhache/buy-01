@@ -1,0 +1,203 @@
+<span class="orb orb-one" aria-hidden="true"></span>
+<span class="orb orb-two" aria-hidden="true"></span>
+
+<div class="wrap">
+  <form class="glass" [formGroup]="form" (ngSubmit)="save()" novalidate aria-labelledby="cp-title">
+    <header class="page-head">
+      <h1 id="cp-title" class="title">Create product</h1>
+      <p class="subtitle">Add photos and details. The first photo is the cover.</p>
+    </header>
+
+    <!-- Photos -->
+    <section class="section" aria-labelledby="photos-title">
+      <div class="section-head">
+        <h2 id="photos-title" class="section-title">Photos</h2>
+        <span class="counter" aria-live="polite">{{ images().length }} / {{ maxImages }}</span>
+      </div>
+
+      <input
+        #fileInput
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        multiple
+        hidden
+        (change)="onFilesSelected($event)"
+      />
+
+      <ul class="gallery">
+        @for (img of images(); track img.id; let i = $index) {
+          <li class="tile" [attr.aria-busy]="img.status === 'uploading' || img.status === 'deleting'">
+            <img
+              [src]="img.serverUrl ?? img.previewUrl"
+              [alt]="'Product photo ' + (i + 1)"
+              (error)="img.serverUrl && useLocalPreview(img.id)"
+            />
+
+            @if (img.status === 'confirmed') {
+              @if (i === 0) {
+                <span class="cover-badge">Cover</span>
+              }
+              <span class="status-badge">
+                <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+                  <path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+                </svg>
+                <span class="sr-only">Uploaded</span>
+              </span>
+            }
+
+            @switch (img.status) {
+              @case ('uploading') {
+                <div class="overlay">
+                  <span class="overlay-text">Uploading {{ img.progress }}%</span>
+                  <div
+                    class="progress"
+                    role="progressbar"
+                    aria-label="Upload progress"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    [attr.aria-valuenow]="img.progress"
+                  >
+                    <span [style.width.%]="img.progress"></span>
+                  </div>
+                </div>
+              }
+              @case ('deleting') {
+                <div class="overlay"><span class="overlay-text">Removing…</span></div>
+              }
+              @case ('error') {
+                <div class="overlay" role="alert">
+                  <span class="overlay-text error-text">Upload failed</span>
+                </div>
+              }
+            }
+
+            <div class="tile-bar">
+              @if (img.status === 'confirmed' && i !== 0) {
+                <button type="button" class="mini" (click)="makeCover(img.id)">Make cover</button>
+              } @else if (img.status === 'error') {
+                <button type="button" class="mini" (click)="retry(img.id)">Retry</button>
+              } @else {
+                <span></span>
+              }
+              <button
+                type="button"
+                class="mini remove"
+                (click)="removeImage(img.id)"
+                [disabled]="img.status === 'deleting'"
+                [attr.aria-label]="'Remove photo ' + (i + 1)"
+              >
+                <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+                  <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none" />
+                </svg>
+              </button>
+            </div>
+          </li>
+        }
+
+        @if (canAddMore()) {
+          <li class="tile add">
+            <button
+              type="button"
+              class="drop"
+              [class.dragging]="dragging()"
+              (click)="fileInput.click()"
+              (dragover)="onDragOver($event)"
+              (dragleave)="onDragLeave()"
+              (drop)="onDrop($event)"
+            >
+              <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+              <span class="drop-title">Add photos</span>
+              <span class="drop-hint">Click or drop · {{ slotsLeft() }} left</span>
+            </button>
+          </li>
+        }
+      </ul>
+
+      <p class="hint">JPG, PNG or WebP. Max 5 MB each. Up to {{ maxImages }} photos. Photos upload as soon as you add them.</p>
+
+      @if (imageError(); as message) {
+        <p class="error" role="alert">{{ message }}</p>
+      }
+    </section>
+
+    <!-- Details -->
+    <section class="section last" aria-labelledby="details-title">
+      <h2 id="details-title" class="section-title">Details</h2>
+
+      <div class="grid">
+        <div class="field full">
+          <label for="cp-name">Product name</label>
+          <input id="cp-name" type="text" formControlName="name" maxlength="80" placeholder="e.g. Handmade leather wallet" />
+          @if (touched('name') && form.controls.name.hasError('required')) {
+            <p class="error" role="alert">Enter a product name.</p>
+          } @else if (touched('name') && form.controls.name.hasError('minlength')) {
+            <p class="error" role="alert">Name must be at least 3 characters.</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="cp-price">Price</label>
+          <div class="prefixed">
+            <span class="prefix" aria-hidden="true">{{ currency }}</span>
+            <input id="cp-price" type="number" inputmode="decimal" min="0" step="0.01" formControlName="price" placeholder="0.00" />
+          </div>
+          @if (touched('price') && form.controls.price.hasError('required')) {
+            <p class="error" role="alert">Enter a price.</p>
+          } @else if (touched('price') && form.controls.price.hasError('min')) {
+            <p class="error" role="alert">Price must be greater than 0.</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="cp-qty">Quantity</label>
+          <input id="cp-qty" type="number" inputmode="numeric" min="0" step="1" formControlName="quantity" />
+          @if (touched('quantity') && form.controls.quantity.hasError('required')) {
+            <p class="error" role="alert">Enter a quantity.</p>
+          } @else if (touched('quantity') && (form.controls.quantity.hasError('min') || form.controls.quantity.hasError('pattern'))) {
+            <p class="error" role="alert">Use a whole number, 0 or more.</p>
+          }
+        </div>
+
+        <div class="field full">
+          <div class="label-row">
+            <label for="cp-desc">Description</label>
+            <span class="counter">{{ form.controls.description.value.length }} / 1000</span>
+          </div>
+          <textarea
+            id="cp-desc"
+            formControlName="description"
+            rows="5"
+            maxlength="1000"
+            placeholder="Materials, size, condition, what makes it special…"
+          ></textarea>
+          @if (touched('description') && form.controls.description.hasError('required')) {
+            <p class="error" role="alert">Enter a description.</p>
+          } @else if (touched('description') && form.controls.description.hasError('minlength')) {
+            <p class="error" role="alert">Description must be at least 10 characters.</p>
+          }
+        </div>
+      </div>
+    </section>
+
+    <footer class="actions">
+      @if (submitHint(); as hint) {
+        <p class="submit-hint" id="submit-hint" role="status">{{ hint }}</p>
+      }
+      <button type="button" class="btn ghost" (click)="clear()" [disabled]="saving()">Clear</button>
+      <button
+        type="submit"
+        class="btn save"
+        [disabled]="!canSubmit()"
+        [attr.aria-describedby]="submitHint() ? 'submit-hint' : null"
+      >
+        @if (saving()) {
+          Creating…
+        } @else {
+          Create product
+        }
+      </button>
+    </footer>
+  </form>
+</div>

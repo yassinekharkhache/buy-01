@@ -1,0 +1,178 @@
+:host {
+  --brand: rgb(0, 119, 181);
+  --white: rgb(255, 255, 255);
+
+  position: fixed;
+  inset: 0 0 auto auto;
+  z-index: 1000;
+  display: block;
+  width: min(100%, 30rem);
+  box-sizing: border-box;
+  padding: calc(1rem + env(safe-area-inset-top, 0px)) 1rem 0;
+  pointer-events: none;
+  font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.region {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.625rem;
+}
+
+.snack {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 28rem;
+  box-sizing: border-box;
+  padding: 0.75rem 0.75rem 0.75rem 0.875rem;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  color: var(--white);
+  /* Blue-tinted glass so it stays readable on white and on busy pages alike */
+  background: rgba(0, 119, 181, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: blur(40px) saturate(140%);
+  backdrop-filter: blur(40px) saturate(140%);
+  box-shadow:
+    0 1rem 2.25rem rgba(0, 119, 181, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  pointer-events: auto;
+}
+
+.badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--white);
+  color: var(--brand);
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* Shape + glyph carry the meaning, not color */
+.type-error .badge {
+  border-radius: 0.45rem;
+}
+
+.message {
+  flex: 1;
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.action {
+  flex: none;
+  padding: 0.45rem 0.85rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--brand);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--white);
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.22);
+  }
+}
+
+button:focus-visible {
+  outline: 2px solid var(--white);
+  outline-offset: 2px;
+}
+
+/* Time-remaining bar */
+.timer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.75);
+  transform-origin: left center;
+  animation-name: drain;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes drain {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.snack-enter {
+  animation: snack-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.snack-leave {
+  animation: snack-out 0.2s ease-in forwards;
+}
+
+@keyframes snack-in {
+  from {
+    opacity: 0;
+    transform: translateX(2rem) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes snack-out {
+  to {
+    opacity: 0;
+    transform: translateX(1rem) scale(0.97);
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .snack {
+    background: rgba(0, 119, 181, 0.92);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snack-enter,
+  .snack-leave {
+    animation-duration: 0.01ms;
+  }
+  .timer {
+    animation: none;
+    display: none;
+  }
+}
