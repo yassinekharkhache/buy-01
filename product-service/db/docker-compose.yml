@@ -1,6 +1,6 @@
 services:
   mongodb:
-    image: mongo:8
+    image: mongo:7.0
     container_name: mongodb_product_service
     restart: unless-stopped
     ports:

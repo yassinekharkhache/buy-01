@@ -16,9 +16,10 @@ import com.buy01.user_service.dto.UserResponse;
 import com.buy01.user_service.model.User;
 import com.buy01.user_service.service.AuthService;
 import com.buy01.user_service.service.UserService;
-
+import org.springframework.http.HttpStatus;
 import java.util.Map;
 
+import org.springframework.web.server.ResponseStatusException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -47,7 +48,12 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getLoggedInUser(
             @AuthenticationPrincipal User user) {
-
+	if (user == null) {
+    		throw new ResponseStatusException(
+        	HttpStatus.NOT_FOUND,
+        	"User not found"
+    	);
+	}
         return ResponseEntity.ok(
                 userService.getUserResponse(user)
         );
@@ -56,7 +62,6 @@ public class AuthController {
     @PutMapping("/me")
     public ResponseEntity<UserResponse> updateLoggedInUser(
             @AuthenticationPrincipal User user, @Valid @RequestBody UpdateUserDto data) {
-
         return ResponseEntity.ok(
                 userService.updateUser(user, data)
         );

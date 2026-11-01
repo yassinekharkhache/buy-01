@@ -1,5 +1,4 @@
 package com.buy01.product_service.kafka;
-
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +16,6 @@ public class ProductEventProducer {
 
     public void publishProductCreated(ProductCreatedEvent event) {
         // Use productId as the Kafka key
-        kafkaTemplate.send("product-created", event.productId(), event);
+        kafkaTemplate.send("product-created", event.productId(), event.userId(),event.uploadSessionId() );
     }
 }

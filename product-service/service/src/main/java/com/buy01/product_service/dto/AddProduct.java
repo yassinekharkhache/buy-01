@@ -20,6 +20,10 @@ public record AddProduct(
     @Min(value = 0, message = "Quantity cannot be negative")
     @Max(value = 1000000, message = "Quantity must not exceed 1000000")
     @NotNull(message = "Quantity is required")
-    int quantity
+    int quantity,
+
+    @NotBlank(message = "sessionId is required")
+    @Size(min = 3, max = 70, message = "sessionId must be between 3 and 70 characters")
+    String uploadSessionId
 
 ) {}

@@ -21,11 +21,10 @@ public class SecurityConfig {
         return http
             .cors(Customizer.withDefaults())
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
-            .authorizeExchange(exchanges -> exchanges
-                .pathMatchers("/auth/**").permitAll()
-                .anyExchange().authenticated()
+            .authorizeExchange(exchange -> exchange
+                    .anyExchange().permitAll()
             )
-            .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults()))
+	    .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults()))
             .build();
     }
 

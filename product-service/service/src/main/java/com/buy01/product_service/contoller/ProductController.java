@@ -4,7 +4,7 @@ import com.buy01.product_service.dto.*;
 import com.buy01.product_service.model.Product;
 import com.buy01.product_service.service.ProductService;
 import jakarta.validation.Valid;
-import java.util.List;
+import java.util.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -27,10 +27,10 @@ public class ProductController {
     private final ProductService productService;
 
     @PostMapping("/products")
-    public ResponseEntity<String> createProduct(@Valid @RequestBody AddProduct addProduct,@AuthenticationPrincipal Jwt jwt) {
+    public ResponseEntity<?> createProduct(@Valid @RequestBody AddProduct addProduct,@AuthenticationPrincipal Jwt jwt) {
         String userId = jwt.getClaimAsString("userID");
         productService.addProduct(addProduct, userId);
-        return ResponseEntity.ok("Product created successfully");
+        return ResponseEntity.ok(Map.of("message","Product created successfully"));
     }
 
     @DeleteMapping("/products/{id}")

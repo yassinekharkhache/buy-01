@@ -4,5 +4,6 @@ package com.buy01.product_service.dto;
 public record ProductCreatedEvent(
     String productId,
     String userId,
-    long createdAt
+    long createdAt,
+    String uploadSessionId
 ){}

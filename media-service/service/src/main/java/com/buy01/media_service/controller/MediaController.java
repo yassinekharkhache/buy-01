@@ -32,12 +32,12 @@ public class MediaController {
     }
     
     @PostMapping("/upload-sessions/{sessionId}/images")
-    public ResponseEntity<String> uploadImage(@PathVariable String sessionId,
+    public ResponseEntity<?> uploadImage(@PathVariable String sessionId,
             @RequestParam MultipartFile file,
             @RequestParam("position") int position,
             @AuthenticationPrincipal Jwt jwt) {
-        mediaService.uploadImage(sessionId, file, jwt.getClaimAsString("userID"), position);
-        return ResponseEntity.status(201).body("Image uploaded successfully");
+        var image_response =  mediaService.uploadImage(sessionId, file, jwt.getClaimAsString("userID"), position);
+        return ResponseEntity.status(201).body(image_response);
     }
 
     // @PostMapping ("/upload-sessions/{sessionId}/commit")// <<< this will not be end point any more i will be kafka envet

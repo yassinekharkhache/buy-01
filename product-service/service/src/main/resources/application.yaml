@@ -2,6 +2,13 @@ spring:
   application:
     name: product-service
 
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+
   mongodb:
     uri: mongodb://rootuser:rootpass@localhost:27018/product_service?authSource=admin
 
