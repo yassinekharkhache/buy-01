@@ -23,3 +23,9 @@ tmux send-keys -t user-service 'cd user-service/service;./mvnw spring-boot:run' 
 
 tmux new -d -s user-service-db
 tmux send-keys -t user-service-db 'cd user-service/db;sudo ./init.sh' C-m
+
+tmux new -d -s kafka
+tmux send-keys -t kafka 'cd kafka;sudo ./init.sh' C-m
+
+tmux new -d -s gateway
+tmux send-keys -t gateway 'cd gateway;./mvnw spring-boot:run' C-m

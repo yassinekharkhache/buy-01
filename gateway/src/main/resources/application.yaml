@@ -1,32 +1,40 @@
 server:
   port: 2020
   
-
 jwt:
-  public-key-path: ${JWT_PUBLIC_KEY}
+  public-key-path: file:${JWT_PUBLIC_KEY}
+
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web.reactive: DEBUG
+    org.springframework.http.server.reactive: DEBUG
+    reactor.netty: DEBUG
 
 spring:
   application:
     name: gateway
   cloud:
     gateway:
-      routes:
-        - id: product-service
-          uri: lb://PRODUCT-SERVICE
-          predicates:
-            - Path=/api/products/**
+      server:
+        webflux:
+          routes:
+            - id: product-service
+              uri: lb://PRODUCT-SERVICE
+              predicates:
+                - Path=/api/products/**
 
-        - id: user-service
-          uri: lb://USER-SERVICE
-          predicates:
-            - Path=/api/users/**
-            - Path=/api/auth/**
-        
-        - id: media-service
-          uri: lb://MEDIA-SERVICE
-          predicates:
-            - Path=/api/media/**
+            - id: user-service
+              uri: lb://USER-SERVICE
+              predicates:
+                - Path=/api/users/**,/api/auth/**
 
+            - id: media-service
+              uri: lb://MEDIA-SERVICE
+              predicates:
+                - Path=/api/media/**
 
 eureka:
   client:

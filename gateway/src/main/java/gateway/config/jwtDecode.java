@@ -10,9 +10,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+
+import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
 
 @Configuration 
 public class jwtDecode {
@@ -20,7 +21,7 @@ public class jwtDecode {
     private Resource publicKeyResource;
 
     @Bean
-    public JwtDecoder jwtDecoder() throws Exception {
+    public ReactiveJwtDecoder jwtDecoder() throws Exception {
 
         // Read the PEM-encoded RSA public key.
         String pem;
@@ -46,10 +47,15 @@ public class jwtDecode {
                 .generatePublic(keySpec);
 
         // Configure JWT signature verification using RS256-compatible RSA key.
-        NimbusJwtDecoder decoder = NimbusJwtDecoder.withPublicKey(publicKey).build();
+        //NimbusJwtDecoder decoder = NimbusJwtDecoder.withPublicKey(publicKey).build();
 
         // Validate expiration, not-before time, and the expected issuer.
-        decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer("buy01-user-service"));
+        //decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer("buy01-user-service"));
+	NimbusReactiveJwtDecoder decoder =
+        NimbusReactiveJwtDecoder.withPublicKey(publicKey)
+            .build();
+
+    	decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer("buy01-user-service"));
 
         return decoder;
     }

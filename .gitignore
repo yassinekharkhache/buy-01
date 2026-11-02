@@ -2,4 +2,4 @@
 /.env
 ./private.pem
 ./public.pem
-media-service/media/product/tmp/
+media-service/media/product/
