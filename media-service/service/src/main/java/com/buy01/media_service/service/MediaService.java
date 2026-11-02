@@ -195,10 +195,6 @@ public class MediaService {
         return null;
     }
 
-    // commitUploadSession
-    public void commitUploadSession(String sessionId, String ownerId,String productId) {
-        
-    }
 
     public boolean imageExists(String name) {
         return Files.isRegularFile(tmp.resolve(name));
@@ -278,8 +274,7 @@ public class MediaService {
             .stream()
             .map(media -> new ProductImageResponse(
                     media.getId(),
-                    media.getPosition(),
-                    media.getObjectKey()
+                    media.getPosition()
             ))
             .toList();
     }
@@ -289,6 +284,6 @@ public class MediaService {
                 .findByProductIdAndPosition(productId, 1)
                 .orElseThrow(() -> new RuntimeException("Main image not found"));
 
-        return new MainImageResponse(media.getId(), media.getObjectKey());
+        return new MainImageResponse(media.getId());
     }
 }

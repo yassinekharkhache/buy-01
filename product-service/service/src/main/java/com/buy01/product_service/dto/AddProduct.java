@@ -24,6 +24,12 @@ public record AddProduct(
 
     @NotBlank(message = "sessionId is required")
     @Size(min = 3, max = 70, message = "sessionId must be between 3 and 70 characters")
-    String uploadSessionId
+    String uploadSessionId,
+
+    @Positive(message = "Main pic position must be positive")
+    @NotNull(message = "Main pic position is required")
+    @Max (value = 6, message = "Main pic position must not exceed 6")
+    @Min (value = 0, message = "Main pic position must be at least 1")
+    int mainPicPosition
 
 ) {}

@@ -37,7 +37,8 @@ public class ProductService {
         ProductCreatedEvent event = new ProductCreatedEvent(
             savedProduct.getId(),
             savedProduct.getUserId(),
-            product.uploadSessionId()
+            product.uploadSessionId(),
+            product.mainPicPosition()
         );
 
         eventProducer.publishProductCreated(event);

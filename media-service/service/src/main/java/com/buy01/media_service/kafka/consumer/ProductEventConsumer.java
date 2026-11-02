@@ -40,6 +40,7 @@ public class ProductEventConsumer {
     groupId = "product-group"
 )
 public void consume(ProductCreatedEvent event) {
+        
 
         UploadSession session = sessionRepository
                 .findById(event.uploadSessionId())
@@ -96,13 +97,10 @@ public void consume(ProductCreatedEvent event) {
                 if (!Files.exists(destination)) {
                     Files.move(source, destination);
                 }
-
-                // Update MongoDB only after file is available
-                media.setObjectKey(
-                    event.productId() + "/" + media.getId()
-                );
-
+                
                 media.setProductId(event.productId());
+                media.setMainPicPosition(event.mainPicPosition());
+                
 
                 mediaRepository.save(media);
             }

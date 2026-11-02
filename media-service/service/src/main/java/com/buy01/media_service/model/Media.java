@@ -34,8 +34,8 @@ public class Media {
     @Field ("position")
     private int position;
 
-    @Field ("objectKey")
-    private String objectKey;
+    @Field ("mainPicPosition")
+    private int mainPicPosition;
 
     @Field ("createdAt")
     private long createdAt;
