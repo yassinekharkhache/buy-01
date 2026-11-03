@@ -4,15 +4,6 @@ server:
 jwt:
   public-key-path: file:${JWT_PUBLIC_KEY}
 
-logging:
-  level:
-    root: INFO
-    org.springframework.cloud.gateway: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.web.reactive: DEBUG
-    org.springframework.http.server.reactive: DEBUG
-    reactor.netty: DEBUG
-
 spring:
   application:
     name: gateway
