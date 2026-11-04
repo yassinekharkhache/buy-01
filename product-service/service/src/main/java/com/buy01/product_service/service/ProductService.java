@@ -33,12 +33,12 @@ public class ProductService {
         productEntity.setDescription(product.description());
         productEntity.setUserId(userId);
         productEntity.setCreatedAt(System.currentTimeMillis());
+        productEntity.setMainPicPosition(product.mainPicPosition());
         var savedProduct = productRepository.save(productEntity);
         ProductCreatedEvent event = new ProductCreatedEvent(
             savedProduct.getId(),
             savedProduct.getUserId(),
-            product.uploadSessionId(),
-            product.mainPicPosition()
+            product.uploadSessionId()
         );
 
         eventProducer.publishProductCreated(event);

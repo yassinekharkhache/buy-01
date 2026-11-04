@@ -13,5 +13,5 @@ public interface MediaRepository extends MongoRepository<Media, String> {
     void deleteByProductId(String productId);
     List<Media> findByProductIdOrderByPositionAsc(String productId);
     // findByProductIdAndPosition
-    Optional<Media> findByProductIdAndPosition(String productId,int position);
+    Optional<Media> findByProductIdAndPositionEqualMainPicPosition(String productId);
 }

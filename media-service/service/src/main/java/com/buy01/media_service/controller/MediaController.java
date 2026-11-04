@@ -40,13 +40,6 @@ public class MediaController {
         return ResponseEntity.status(201).body(image_response);
     }
 
-    // @PostMapping ("/upload-sessions/{sessionId}/commit")// <<< this will not be end point any more i will be kafka envet
-    // public ResponseEntity<String> commitUploadSession(@PathVariable String sessionId,
-    //         @AuthenticationPrincipal Jwt jwt) {
-    //     // mediaService.commitUploadSession(sessionId, jwt.getClaimAsString("userID"));
-    //     return ResponseEntity.ok("Upload session committed successfully");
-    // }
-
     @DeleteMapping("/images/{imageId}")
     public ResponseEntity<?> deleteSessionImage(
         @PathVariable String imageId,

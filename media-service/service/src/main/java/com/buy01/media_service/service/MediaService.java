@@ -281,7 +281,7 @@ public class MediaService {
 
     public MainImageResponse getMainPic(String productId){
         Media media = mediaRepository
-                .findByProductIdAndPosition(productId, 1)
+                .findByProductIdAndPositionEqualMainPicPosition(productId)
                 .orElseThrow(() -> new RuntimeException("Main image not found"));
 
         return new MainImageResponse(media.getId());

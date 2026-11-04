@@ -99,8 +99,6 @@ public void consume(ProductCreatedEvent event) {
                 }
                 
                 media.setProductId(event.productId());
-                media.setMainPicPosition(event.mainPicPosition());
-                
 
                 mediaRepository.save(media);
             }

@@ -32,6 +32,9 @@ public class Product {
     @Field ("quantity")
     private int quantity;
 
+    @Field ("mainPicPosition")
+    private int mainPicPosition;
+
     @Indexed(unique = true)
     @Field ("userId")
     private String userId;
