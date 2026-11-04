@@ -32,6 +32,7 @@ public class ProductService {
         productEntity.setPrice(product.price());
         productEntity.setDescription(product.description());
         productEntity.setUserId(userId);
+        productEntity.setQuantity(product.quantity());
         productEntity.setCreatedAt(System.currentTimeMillis());
         productEntity.setMainPicPosition(product.mainPicPosition());
         var savedProduct = productRepository.save(productEntity);
