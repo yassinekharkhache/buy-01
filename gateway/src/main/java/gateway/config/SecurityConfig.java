@@ -54,7 +54,9 @@ public class SecurityConfig {
         return exchange -> {
             String path = exchange.getRequest().getURI().getPath();
 
-            if (path.equals("/api/auth/register") || (path.equals("/api/auth/login")))  {
+            if (path.equals("/api/auth/register") || (path.equals("/api/auth/login") || (path.startsWith("/product"))))  {
+		System.out.println("------------------------------");
+		System.out.println(path);
                 return Mono.empty();
             }
 
