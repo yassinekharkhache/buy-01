@@ -30,7 +30,7 @@ public class MediaController {
         UploadSession session = SessionService.createUploadSession(userId);
         return ResponseEntity.created(URI.create("/api/media/upload-sessions/" + session.getId())).body(Map.of("id", session.getId(), "expiresAt", session.getExpiresAt().toString()));
     }
-    
+
     @PostMapping("/upload-sessions/{sessionId}/images")
     public ResponseEntity<?> uploadImage(@PathVariable String sessionId,
             @RequestParam MultipartFile file,
@@ -51,16 +51,15 @@ public class MediaController {
             return ResponseEntity.noContent().build();
     }
 
-
-    @GetMapping("/products/{productId}/images")
+    @GetMapping("/{productId}/images")
     public ResponseEntity<List<ProductImageResponse>> getImagesOfProduct(@PathVariable String productId) {
         List<ProductImageResponse> images = mediaService.getImagesOfProduct(productId);
         return ResponseEntity.ok(images);
     }
 
-    @GetMapping("/products/{productId}/images/main")
-    public ResponseEntity<?> productMainImage(@PathVariable String productId){
-        MainImageResponse image = mediaService.getMainPic(productId);
+    @GetMapping("/{productId}/images/{mainPicPosition}")
+    public ResponseEntity<?> productMainImage(@PathVariable String productId, @PathVariable int mainPicPosition){
+        MainImageResponse image = mediaService.getMainPic(productId,mainPicPosition);
         return ResponseEntity.ok(image);
     }
 }
