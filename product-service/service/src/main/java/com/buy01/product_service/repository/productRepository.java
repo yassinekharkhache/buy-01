@@ -13,5 +13,7 @@ public interface productRepository extends MongoRepository<Product, String> {
     long sameCreatedAt,
     String id,
     Pageable pageable);
+    // findByUserId
+    List<Product> findByUserIdOrderByCreatedAtDesc(String userId);
 
 }

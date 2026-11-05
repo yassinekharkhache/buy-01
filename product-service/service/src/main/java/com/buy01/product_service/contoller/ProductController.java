@@ -52,4 +52,12 @@ public class ProductController {
         List<Product> products = productService.getProductsByLastId(lastCreatedAt, lastId);
         return ResponseEntity.ok(products);
     }
+
+    //get my products
+    @GetMapping("/my-products")
+    public ResponseEntity<List<Product>> getMyProducts(@AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaimAsString("userID");
+        List<Product> products = productService.getMyProducts(userId);
+        return ResponseEntity.ok(products);
+    }
 }

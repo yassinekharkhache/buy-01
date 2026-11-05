@@ -104,4 +104,8 @@ public class ProductService {
         );
     }
 
+    public List<Product> getMyProducts(String userId) {
+        return productRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    }
+
 }
