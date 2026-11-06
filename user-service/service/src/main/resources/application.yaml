@@ -3,6 +3,9 @@ spring:
     name: user-service
   mongodb:
     uri: mongodb://rootuser:rootpass@localhost:27017/user_service?authSource=admin
+  data:
+    mongodb:
+      auto-index-creation: true
 
 # port: 8800
 server:
