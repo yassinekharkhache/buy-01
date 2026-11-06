@@ -53,6 +53,13 @@ public class ProductController {
         return ResponseEntity.ok(products);
     }
 
+    // get product by id
+    @GetMapping("/products/{id}")
+    public ResponseEntity<Product> getProductById(@PathVariable String id) {
+        Product product = productService.getProductById(id);
+        return ResponseEntity.ok(product);
+    }
+
     //get my products
     @GetMapping("/my-products")
     public ResponseEntity<List<Product>> getMyProducts(@AuthenticationPrincipal Jwt jwt) {
