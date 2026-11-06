@@ -20,7 +20,6 @@ import java.util.UUID;
 @Service
 @AllArgsConstructor
 public class ProductService {
-
     private final productRepository productRepository;
     private final ProductEventProducer eventProducer;
 
@@ -35,6 +34,7 @@ public class ProductService {
         productEntity.setQuantity(product.quantity());
         productEntity.setCreatedAt(System.currentTimeMillis());
         productEntity.setMainPicPosition(product.mainPicPosition());
+        productEntity.setCategory(product.category());
         var savedProduct = productRepository.save(productEntity);
         ProductCreatedEvent event = new ProductCreatedEvent(
             savedProduct.getId(),

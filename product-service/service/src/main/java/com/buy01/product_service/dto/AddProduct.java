@@ -1,9 +1,10 @@
 package com.buy01.product_service.dto;
 
+import com.buy01.product_service.model.ProductCategory;
+
 import jakarta.validation.constraints.*;
 
 public record AddProduct(
-
     @NotBlank(message = "Name is required")
     @Size(min = 3, max = 70, message = "Name must be between 3 and 70 characters")
     String name,
@@ -30,6 +31,8 @@ public record AddProduct(
     @NotNull(message = "Main pic position is required")
     @Max (value = 6, message = "Main pic position must not exceed 6")
     @Min (value = 0, message = "Main pic position must be at least 1")
-    int mainPicPosition
+    int mainPicPosition,
 
+    @NotNull(message = "Category is required")
+    ProductCategory category
 ) {}

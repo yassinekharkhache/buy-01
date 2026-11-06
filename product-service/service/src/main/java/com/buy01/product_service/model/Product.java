@@ -26,18 +26,22 @@ public class Product {
     @Field("description")
     private String description;
 
+    @Indexed(unique = true)
+    @Field ("userId")
+    private String userId;
+
+    @Field ("category")
+    private ProductCategory category;
+
     @Field ("price")
     private double price;
-
+    
+    
     @Field ("quantity")
     private int quantity;
 
     @Field ("mainPicPosition")
     private int mainPicPosition;
-
-    @Indexed(unique = true)
-    @Field ("userId")
-    private String userId;
 
     // createdAt
     @Field ("createdAt")

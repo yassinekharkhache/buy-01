@@ -1,0 +1,19 @@
+package com.buy01.product_service.model;
+
+public enum ProductCategory {
+    ELECTRONICS,
+    CLOTHING,
+    SHOES,
+    ACCESSORIES,
+    HOME_AND_GARDEN,
+    BEAUTY_AND_PERSONAL_CARE,
+    HEALTH_AND_WELLNESS,
+    SPORTS_AND_OUTDOORS,
+    TOYS_AND_GAMES,
+    BOOKS_AND_STATIONERY,
+    FOOD_AND_BEVERAGES,
+    JEWELRY_AND_WATCHES,
+    FURNITURE,
+    AUTOMOTIVE,
+    PET_SUPPLIES
+}
