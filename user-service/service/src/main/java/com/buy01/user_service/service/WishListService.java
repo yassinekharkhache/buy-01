@@ -31,8 +31,12 @@ public class WishListService {
         if (countUserWishList(userId) == 50) {
             throw new RuntimeException("User has reached the maximum number of wish list items (50).");
         }
-        List<?> productIds = wishListRepository.findAllByUserId(userId);
-        return productIds;
+	List<WishList> wishLists =
+        wishListRepository.findAllByUserId(userId);
+
+    	return wishLists.stream()
+            .map(WishList::getProductId)
+            .toList();
     }
 
     public int countUserWishList(String userId){

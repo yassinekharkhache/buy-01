@@ -40,12 +40,9 @@ public class WishListController {
     }
 
     @GetMapping
-    public ResponseEntity<List<String>> getUserWishList(@AuthenticationPrincipal User user) {
+    public ResponseEntity<List<?>> getUserWishList(@AuthenticationPrincipal User user) {
         List<?> productIds = wishListService.userWishList(user.getId());
-        List<String> productIdsAsString = productIds.stream()
-                .map(Object::toString)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(productIdsAsString);
+        return ResponseEntity.ok(productIds);
     }
 
     // is product in wishlist

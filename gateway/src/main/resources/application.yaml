@@ -20,7 +20,7 @@ spring:
             - id: user-service
               uri: lb://USER-SERVICE
               predicates:
-                - Path=/api/users/**,/api/auth/**,/api/wishlist/**
+                - Path=/api/users/**,/api/auth/**,/api/wishlist/**,/api/wishlist
 
             - id: media-service
               uri: lb://MEDIA-SERVICE

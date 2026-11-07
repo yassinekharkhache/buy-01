@@ -22,7 +22,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/images/**")
+        registry.addResourceHandler("/profile/**")
                 .addResourceLocations(path.resolve("profile").toUri().toString());
 
         registry.addResourceHandler("/product/**")
