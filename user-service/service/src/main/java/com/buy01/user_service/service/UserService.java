@@ -17,6 +17,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder encoder;
+    private final JwtService jwtService;
 
     public Optional<User> getUserByName(String username) {
         return userRepository.findByName(username);
@@ -31,7 +32,7 @@ public class UserService {
         );
     }
     
-    public UserResponse updateUser(User user, @Valid UpdateUserDto data) {
+    public String updateUser(User user, @Valid UpdateUserDto data) {
         if (data.currentPassword() != null && !data.currentPassword().isBlank()) {
             if (!encoder.matches(data.currentPassword(), user.getPassword())) {
                 throw new RuntimeException("Current password is incorrect.");
@@ -51,6 +52,6 @@ public class UserService {
         }
 
         User updatedUser = userRepository.save(user);
-        return getUserResponse(updatedUser);
+        return jwtService.generateToken(updatedUser);
     }
 }

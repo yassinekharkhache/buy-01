@@ -60,11 +60,9 @@ public class AuthController {
     }
 
     @PutMapping("/me")
-    public ResponseEntity<UserResponse> updateLoggedInUser(
-            @AuthenticationPrincipal User user, @Valid @RequestBody UpdateUserDto data) {
-        return ResponseEntity.ok(
-                userService.updateUser(user, data)
-        );
+    public ResponseEntity<Map<String,String>> updateLoggedInUser(@AuthenticationPrincipal User user, @Valid @RequestBody UpdateUserDto data) {
+            String token = userService.updateUser(user, data);
+            return ResponseEntity.ok(Map.of("token",token));
     }
 
 }
