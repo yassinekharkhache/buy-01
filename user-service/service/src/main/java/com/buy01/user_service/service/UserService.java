@@ -32,6 +32,11 @@ public class UserService {
     }
     
     public UserResponse updateUser(User user, @Valid UpdateUserDto data) {
+        if (data.currentPassword() != null && !data.currentPassword().isBlank()) {
+            if (!encoder.matches(data.currentPassword(), user.getPassword())) {
+                throw new RuntimeException("Current password is incorrect.");
+            }
+        }
         if (data.name() != null && !data.name().isBlank()) {
             user.setName(data.name());
         }

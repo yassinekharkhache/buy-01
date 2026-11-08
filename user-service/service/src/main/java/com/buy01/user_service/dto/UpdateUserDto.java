@@ -17,7 +17,10 @@ public record UpdateUserDto(
     String email,
 
     @Size(min = 6, max = 70, message = "Password must be at least 6 and at most 70 characters long")
-    String password
+    String password,
+
+    @Size(min = 6, max = 70, message = "Current Password must be at least 6 and at most 70 characters long")
+    String currentPassword
 ) {
     
 }
