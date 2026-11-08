@@ -25,7 +25,7 @@ spring:
             - id: media-service
               uri: lb://MEDIA-SERVICE
               predicates:
-                - Path=/api/media/**,/product/**
+                - Path=/api/media/**,/product/**,/profile/**
 
 eureka:
   client:
