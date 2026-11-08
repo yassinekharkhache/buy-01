@@ -29,6 +29,7 @@ public class MediaService {
     private final SessionRepository sessionRepository;
     private final Path tmp;
     private final Path productMedia;
+    private final Path profileMedia;
 
     public MediaService(
             MediaRepository mediaRepository,
@@ -42,6 +43,7 @@ public class MediaService {
 
         this.tmp = current.resolve("media/product/tmp");
         this.productMedia = current.resolve("media/product");
+        this.profileMedia = current.resolve("media/profiles");
     }
 
     private static final int MAX_IMAGES_PER_SESSION = 7;
@@ -285,5 +287,68 @@ public class MediaService {
                 .orElseThrow(() -> new RuntimeException("Main image not found"));
 
         return new MainImageResponse(media.getId());
+    }
+
+    public void uploadProfilePicture(MultipartFile file, String ownerId) {
+
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "An image file is required");
+        }
+
+        if (file.getSize() > MAX_IMAGE_SIZE) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONTENT_TOO_LARGE,
+                    "Image size must not exceed 5 MB"
+            );
+        }
+
+        byte[] bytes;
+
+        try {
+            bytes = file.getBytes();
+        } catch (Exception e) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Could not read the uploaded file");
+        }
+
+        String contentType = detectImageType(bytes);
+
+        if (contentType == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                    "Only JPEG, PNG and WebP images are supported");
+        }
+
+        String extension = switch (contentType) {
+            case "image/jpeg" -> "jpg";
+            case "image/png" -> "png";
+            case "image/webp" -> "webp";
+            default -> throw new ResponseStatusException(
+                    HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                    "Unsupported image type");
+        };
+
+        String image_name = ownerId + "." + extension;
+        
+        
+        try {
+            for (String ext : List.of("jpg", "png", "webp")) {
+                Path existingImage = profileMedia.resolve(ownerId + "." + ext);
+                
+                if (!existingImage.equals(profileMedia.resolve(image_name))) {
+                    Files.deleteIfExists(existingImage);
+                }
+            }
+            Files.createDirectories(profileMedia);
+            file.transferTo(profileMedia.resolve(image_name));
+        } catch (IOException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to save image",
+                    e);
+        }
     }
 }

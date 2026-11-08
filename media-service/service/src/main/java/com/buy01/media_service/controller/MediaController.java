@@ -62,4 +62,12 @@ public class MediaController {
         MainImageResponse image = mediaService.getMainPic(productId,mainPicPosition);
         return ResponseEntity.ok(image);
     }
+
+    // upload profile picture
+    @PostMapping ("/profile")
+    public ResponseEntity<?> uploadProfilePicture(@RequestParam MultipartFile file, @AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getClaimAsString("userID");
+        mediaService.uploadProfilePicture(file, userId);
+        return ResponseEntity.status(201).build();
+    }
 }
