@@ -43,7 +43,7 @@ public class MediaService {
 
         this.tmp = current.resolve("media/product/tmp");
         this.productMedia = current.resolve("media/product");
-        this.profileMedia = current.resolve("media/profiles");
+        this.profileMedia = current.resolve("media/profile");
     }
 
     private static final int MAX_IMAGES_PER_SESSION = 7;
@@ -331,19 +331,10 @@ public class MediaService {
                     "Unsupported image type");
         };
 
-        String image_name = ownerId + "." + extension;
-        
         
         try {
-            for (String ext : List.of("jpg", "png", "webp")) {
-                Path existingImage = profileMedia.resolve(ownerId + "." + ext);
-                
-                if (!existingImage.equals(profileMedia.resolve(image_name))) {
-                    Files.deleteIfExists(existingImage);
-                }
-            }
             Files.createDirectories(profileMedia);
-            file.transferTo(profileMedia.resolve(image_name));
+            file.transferTo(profileMedia.resolve(ownerId));
         } catch (IOException e) {
             throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
