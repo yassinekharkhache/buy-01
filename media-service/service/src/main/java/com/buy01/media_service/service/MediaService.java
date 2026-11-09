@@ -321,16 +321,6 @@ public class MediaService {
                     HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                     "Only JPEG, PNG and WebP images are supported");
         }
-
-        String extension = switch (contentType) {
-            case "image/jpeg" -> "jpg";
-            case "image/png" -> "png";
-            case "image/webp" -> "webp";
-            default -> throw new ResponseStatusException(
-                    HttpStatus.UNSUPPORTED_MEDIA_TYPE,
-                    "Unsupported image type");
-        };
-
         
         try {
             Files.createDirectories(profileMedia);

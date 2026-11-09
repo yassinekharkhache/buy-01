@@ -1,85 +1,117 @@
-<span class="orb orb-one" aria-hidden="true"></span>
-<span class="orb orb-two" aria-hidden="true"></span>
-
 <div class="wrap">
-  <form class="glass" [formGroup]="form" (ngSubmit)="save()" novalidate aria-labelledby="profile-title">
-    <header class="page-head">
-      <h1 id="profile-title" class="title">Profile</h1>
-      <p class="subtitle">Update your photo, details or password. Change only what you need.</p>
-    </header>
+  <span class="orb orb-one" aria-hidden="true"></span>
+  <span class="orb orb-two" aria-hidden="true"></span>
 
-    <!-- Photo -->
-    <section class="section" aria-labelledby="photo-title">
-      <h2 id="photo-title" class="section-title">Photo</h2>
+  <header class="page-head">
+    <h1 id="profile-title" class="title">Profile</h1>
+    <p class="subtitle">Update your photo, details or password. Change only what you need.</p>
+  </header>
 
-      <div class="photo-row">
-        <div class="avatar">
-          @if (avatarUrl(); as url) {
-            <img [src]="url" alt="Your profile photo" />
-          } @else {
-            <span aria-hidden="true">{{ initial() }}</span>
-          }
-        </div>
+  <!-- Photo: saved on its own -->
+  <section class="glass" aria-labelledby="photo-title">
+    <h2 id="photo-title" class="section-title">Photo</h2>
 
-        <div class="photo-actions">
-          <input #fileInput type="file" accept="image/*" hidden (change)="onFileSelected($event)" />
-          <div class="btn-row">
-            <button type="button" class="btn ghost" (click)="fileInput.click()">
-              {{ avatarFile() ? 'Choose another' : 'Change photo' }}
-            </button>
-            @if (avatarFile()) {
-              <button type="button" class="btn text" (click)="discardAvatar()">Remove new photo</button>
-            }
-          </div>
-          <p class="hint">JPG, PNG or WebP. Max 2 MB.</p>
-          @if (avatarError(); as message) {
-            <p class="error" role="alert">{{ message }}</p>
-          }
-        </div>
+    <div class="photo-row">
+      <div class="avatar">
+        @if (avatarUrl(); as url) {
+          <img [src]="url" alt="Your profile photo" />
+        } @else {
+          <span aria-hidden="true">{{ initial() }}</span>
+        }
       </div>
-    </section>
 
-    <!-- Details -->
+      <div class="photo-actions">
+        <input #fileInput type="file" accept="image/*" hidden (change)="onFileSelected($event)" />
+
+        <div class="btn-row">
+          @if (avatarFile()) {
+            <button type="button" class="btn primary" [disabled]="uploadingAvatar()" (click)="uploadAvatar()">
+              {{ uploadingAvatar() ? 'Uploading…' : 'Upload photo' }}
+            </button>
+            <button type="button" class="btn secondary" [disabled]="uploadingAvatar()" (click)="fileInput.click()">
+              Choose another
+            </button>
+            <button type="button" class="btn secondary" [disabled]="uploadingAvatar()" (click)="discardAvatar()">
+              Cancel
+            </button>
+          } @else {
+            <button type="button" class="btn secondary" (click)="fileInput.click()">Change photo</button>
+          }
+        </div>
+
+        <p class="hint">JPG, PNG or WebP. Max 2 MB.</p>
+
+        @if (avatarError(); as message) {
+          <p class="error" role="alert"><span class="badge" aria-hidden="true">!</span>{{ message }}</p>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Details and password -->
+  <form class="glass" [formGroup]="form" (ngSubmit)="save()" novalidate aria-labelledby="details-title">
     <section class="section" aria-labelledby="details-title">
       <h2 id="details-title" class="section-title">Details</h2>
+
+      @let nameMsg = touched('name')
+        ? (form.controls.name.hasError('required') ? 'Enter your name.'
+          : form.controls.name.hasError('minlength') ? 'Name must be at least 2 characters.' : null)
+        : null;
+      @let emailMsg = touched('email')
+        ? (form.controls.email.hasError('required') ? 'Enter your email address.'
+          : form.controls.email.hasError('email') ? 'Enter a valid email address.' : null)
+        : null;
 
       <div class="grid">
         <div class="field">
           <label for="p-name">Full name</label>
-          <input id="p-name" type="text" formControlName="name" autocomplete="name" />
-          @if (touched('name') && form.controls.name.hasError('required')) {
-            <p class="error" role="alert">Enter your name.</p>
-          } @else if (touched('name') && form.controls.name.hasError('minlength')) {
-            <p class="error" role="alert">Name must be at least 2 characters.</p>
+          <input
+            id="p-name"
+            type="text"
+            formControlName="name"
+            autocomplete="name"
+            [class.invalid]="nameMsg"
+            [attr.aria-invalid]="nameMsg ? true : null"
+            [attr.aria-describedby]="nameMsg ? 'p-name-error' : null"
+          />
+          @if (nameMsg) {
+            <p id="p-name-error" class="error" role="alert"><span class="badge" aria-hidden="true">!</span>{{ nameMsg }}</p>
           }
         </div>
 
         <div class="field">
           <label for="p-email">Email</label>
-          <input id="p-email" type="email" formControlName="email" autocomplete="email" />
-          @if (touched('email') && form.controls.email.hasError('required')) {
-            <p class="error" role="alert">Enter your email address.</p>
-          } @else if (touched('email') && form.controls.email.hasError('email')) {
-            <p class="error" role="alert">Enter a valid email address.</p>
+          <input
+            id="p-email"
+            type="email"
+            formControlName="email"
+            autocomplete="email"
+            [class.invalid]="emailMsg"
+            [attr.aria-invalid]="emailMsg ? true : null"
+            [attr.aria-describedby]="emailMsg ? 'p-email-error' : null"
+          />
+          @if (emailMsg) {
+            <p id="p-email-error" class="error" role="alert"><span class="badge" aria-hidden="true">!</span>{{ emailMsg }}</p>
           }
         </div>
       </div>
     </section>
 
-    <!-- Password -->
     <section class="section" aria-labelledby="password-title">
       <div class="section-head">
         <h2 id="password-title" class="section-title">Password</h2>
-        <button
-          type="button"
-          class="btn text"
-          (click)="togglePasswords()"
-          [attr.aria-pressed]="showPasswords()"
-        >
-          {{ showPasswords() ? 'Hide' : 'Show' }} passwords
+        <button type="button" class="btn secondary small" (click)="togglePasswords()" [attr.aria-pressed]="showPasswords()">
+          Show passwords
         </button>
       </div>
       <p class="hint">Leave these empty to keep your current password.</p>
+
+      @let currentMsg = touched('currentPassword') && form.hasError('currentRequired') ? 'Enter your current password.' : null;
+      @let newMsg = touched('newPassword')
+        ? (form.hasError('newRequired') ? 'Enter a new password.'
+          : form.hasError('newShort') ? 'Password must be at least 8 characters.' : null)
+        : null;
+      @let confirmMsg = touched('confirmPassword') && form.hasError('mismatch') ? 'Passwords don’t match.' : null;
 
       <div class="grid">
         <div class="field full">
@@ -89,9 +121,12 @@
             [type]="showPasswords() ? 'text' : 'password'"
             formControlName="currentPassword"
             autocomplete="current-password"
+            [class.invalid]="currentMsg"
+            [attr.aria-invalid]="currentMsg ? true : null"
+            [attr.aria-describedby]="currentMsg ? 'p-current-error' : null"
           />
-          @if (touched('currentPassword') && form.hasError('currentRequired')) {
-            <p class="error" role="alert">Enter your current password.</p>
+          @if (currentMsg) {
+            <p id="p-current-error" class="error" role="alert"><span class="badge" aria-hidden="true">!</span>{{ currentMsg }}</p>
           }
         </div>
 
@@ -103,11 +138,12 @@
             formControlName="newPassword"
             autocomplete="new-password"
             placeholder="At least 8 characters"
+            [class.invalid]="newMsg"
+            [attr.aria-invalid]="newMsg ? true : null"
+            [attr.aria-describedby]="newMsg ? 'p-new-error' : null"
           />
-          @if (touched('newPassword') && form.hasError('newRequired')) {
-            <p class="error" role="alert">Enter a new password.</p>
-          } @else if (touched('newPassword') && form.hasError('newShort')) {
-            <p class="error" role="alert">Password must be at least 8 characters.</p>
+          @if (newMsg) {
+            <p id="p-new-error" class="error" role="alert"><span class="badge" aria-hidden="true">!</span>{{ newMsg }}</p>
           }
         </div>
 
@@ -118,24 +154,23 @@
             [type]="showPasswords() ? 'text' : 'password'"
             formControlName="confirmPassword"
             autocomplete="new-password"
+            [class.invalid]="confirmMsg"
+            [attr.aria-invalid]="confirmMsg ? true : null"
+            [attr.aria-describedby]="confirmMsg ? 'p-confirm-error' : null"
           />
-          @if (touched('confirmPassword') && form.hasError('mismatch')) {
-            <p class="error" role="alert">Passwords don’t match.</p>
+          @if (confirmMsg) {
+            <p id="p-confirm-error" class="error" role="alert"><span class="badge" aria-hidden="true">!</span>{{ confirmMsg }}</p>
           }
         </div>
       </div>
     </section>
 
     <footer class="actions">
-      <button type="button" class="btn ghost" (click)="resetForm()" [disabled]="!hasChanges() || saving()">
+      <button type="button" class="btn secondary" (click)="resetForm()" [disabled]="!hasChanges() || saving()">
         Discard changes
       </button>
-      <button type="submit" class="btn save" [disabled]="!hasChanges() || saving()">
-        @if (saving()) {
-          Saving…
-        } @else {
-          Save changes
-        }
+      <button type="submit" class="btn primary" [disabled]="!hasChanges() || saving()">
+        {{ saving() ? 'Saving…' : 'Save changes' }}
       </button>
     </footer>
   </form>

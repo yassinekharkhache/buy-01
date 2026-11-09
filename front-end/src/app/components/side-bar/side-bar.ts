@@ -1,201 +1,173 @@
-// import { Component, inject } from '@angular/core';
-// import { Auth } from '../../services/auth/auth';
-
-// @Component({
-//   imports: [],
-//   selector: 'app-side-bar',
-//   styleUrl: './side-bar.css',
-//   templateUrl: './side-bar.html',
-// })
-// export class SideBar {
-//   private auth = inject(Auth);
-//   user = this.auth.user;
-
-//   readonly role = this.user()?.role;
-//   readonly name = this.user()?.name;
-//   readonly email = this.user()?.email
-// }
-
-// import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-// import { RouterLink, RouterLinkActive } from '@angular/router';
-// import { Auth } from '../../services/auth/auth';
-
-// type UserRole = 'SELLER' | 'CLIENT';
-
-// interface NavItem {
-//   label: string;
-//   path: string;
-//   /** SVG path data for a 24x24 stroke icon */
-//   icon: string;
-//   roles: UserRole[];
-//   group: 'CLIENT' | 'SELLER' | "ALL";
-//   /** Only highlight when the URL matches exactly */
-//   exact?: boolean;
-// }
-
-
-// @Component({
-//   imports: [RouterLink, RouterLinkActive],
-//   selector: 'app-side-bar',
-//   styleUrl: './side-bar.css',
-//   templateUrl: './side-bar.html',
-//   changeDetection: ChangeDetectionStrategy.OnPush,
-// })
-
-// export class SideBar {
-//   NAV_ITEMS: NavItem[] = [
-//     // Shared
-//     { label: 'Dashboard', path: '/dashboard', roles: ['CLIENT', 'SELLER'], group: 'ALL', exact: true,
-//       icon: 'M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z' },
-  
-//     // CLIENT only
-//     { label: 'Browse products', path: '/shop', roles: ['CLIENT'], group: 'CLIENT',
-//       icon: 'M6 7h12l1 13H5L6 7zM9 7a3 3 0 016 0' },
-//     { label: 'My orders', path: '/orders', roles: ['CLIENT'], group: 'CLIENT',
-//       icon: 'M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2V3zM8 8h8M8 12h8' },
-//     { label: 'Wishlist', path: '/wishlist', roles: ['CLIENT'], group: 'CLIENT',
-//       icon: 'M12 20s-7-4.4-7-10a4 4 0 017-2.5A4 4 0 0119 10c0 5.6-7 10-7 10z' },
-  
-//     // SELLER only
-//     { label: 'My products', path: '/products', roles: ['SELLER'], group: 'SELLER', exact: true,
-//       icon: 'M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7M12 11v10' },
-//     { label: 'Add product', path: '/products/new', roles: ['SELLER'], group: 'SELLER',
-//       icon: 'M12 5v14M5 12h14' },
-//     { label: 'Sales', path: '/sales', roles: ['SELLER'], group: 'SELLER',
-//       icon: 'M3 17l6-6 4 4 8-8M15 7h6v6' },
-//     { label: 'Analytics', path: '/analytics', roles: ['SELLER'], group: 'SELLER',
-//       icon: 'M5 20V10M12 20V4M19 20v-7' },
-  
-//     // Account (shared)
-//     { label: 'Profile', path: '/profile', roles: ['CLIENT', 'SELLER'], group: 'ALL',
-//       icon: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0' },
-//     { label: 'Settings', path: '/settings', roles: ['CLIENT', 'SELLER'], group: 'ALL',
-//       icon: 'M4 7h10M18 7h2M4 17h2M10 17h10M14 5v4M6 15v4' },
-//   ];
-
-//   private readonly auth = inject(Auth);
-
-//   readonly user = this.auth.user;
-  
-//   readonly name = this.auth.name;
-//   readonly email = this.auth.email;
-//   readonly role = this.auth.role;
-//   readonly id = this.auth.id;
-
-
-//   readonly collapsed = signal(false);
-
-//   readonly roleLabel = computed(() => (this.role() === 'SELLER' ? 'SELLER' : 'CLIENT'));
-//   readonly initial = computed(() => (this.name().trim().charAt(0) || this.roleLabel().charAt(0)).toUpperCase());
-
-//   private readonly visibleItems = computed(() => {
-//     const role = this.role();
-//     return role ? this.NAV_ITEMS.filter((item) => item.roles.includes(role)) : [];
-//   });
-
-//   readonly logoutIcon = 'M9 4H5v16h4M16 8l4 4-4 4M20 12H9';
-
-//   toggle(): void {
-//     this.collapsed.update((v) => !v);
-//   }
-
-//   logout(): void {
-//       this.auth.logout();
-//   }
-// }
-
-
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  model,
+  output,
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { Auth } from '../../services/auth/auth';
+import { ProfileApi } from '../../services/profile-api/profile-api';
 
-type UserRole = 'seller' | 'client';
+import { Observable, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 
-interface NavItem {
+import { AsyncPipe } from '@angular/common';
+
+type Role = 'CLIENT' | 'SELLER';
+
+interface NavLink {
   label: string;
   path: string;
-  /** SVG path data for a 24x24 stroke icon */
-  icon: string;
-  roles: UserRole[];
-  group: 'main' | 'account';
-  /** Only highlight when the URL matches exactly */
-  exact?: boolean;
+  icon: string; // SVG path data (24x24, stroke icons)
+  roles?: readonly Role[]; // omitted = every role
 }
 
+interface NavSection {
+  title: string;
+  links: readonly NavLink[];
+}
+
+const ICONS = {
+  products: 'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0',
+  profiles:
+    'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
+  wishlists:
+    'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z',
+  myProducts:
+    'M7.5 4.27l9 5.15M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.3 7 12 12l8.7-5M12 22V12',
+  create: 'M12 5v14M5 12h14',
+} as const;
+
+const SECTIONS: readonly NavSection[] = [
+  {
+    title: 'Browse',
+    links: [
+      { label: 'Products', path: '/products', icon: ICONS.products },
+      { label: 'Wish lists', path: '/wishlists', icon: ICONS.wishlists },
+    ],
+  },
+  {
+    title: 'Sell',
+    links: [
+      { label: 'My products', path: '/products/mine', icon: ICONS.myProducts, roles: ['SELLER'] },
+      { label: 'Create product', path: 'createproduct', icon: ICONS.create, roles: ['SELLER'] },
+    ],
+  },
+];
+
+const ROLE_LABELS: Record<Role, string> = { CLIENT: 'Client', SELLER: 'Seller' };
 
 @Component({
-  imports: [RouterLink, RouterLinkActive],
   selector: 'app-side-bar',
-  styleUrl: './side-bar.css',
-  templateUrl: './side-bar.html',
+  imports: [RouterLink, RouterLinkActive,AsyncPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[class.collapsed]': 'collapsed()' },
+  templateUrl: './side-bar.html',
+  styleUrl: './side-bar.css',
 })
+
 export class SideBar {
-  private auth = inject(Auth);
-  private router = inject(Router);
-  NAV_ITEMS: NavItem[] = [
-    // Shared
-    { label: 'Dashboard', path: '/dashboard', roles: ['client', 'seller'], group: 'main', exact: true,
-      icon: 'M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z' },
-  
-    // Client only
-    { label: 'Browse products', path: '/shop', roles: ['client'], group: 'main',
-      icon: 'M6 7h12l1 13H5L6 7zM9 7a3 3 0 016 0' },
-    { label: 'My orders', path: '/orders', roles: ['client'], group: 'main',
-      icon: 'M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2V3zM8 8h8M8 12h8' },
-    { label: 'Wishlist', path: '/wishlist', roles: ['client'], group: 'main',
-      icon: 'M12 20s-7-4.4-7-10a4 4 0 017-2.5A4 4 0 0119 10c0 5.6-7 10-7 10z' },
-  
-    // Seller only
-    { label: 'My products', path: '/products', roles: ['seller'], group: 'main', exact: true,
-      icon: 'M3 7l9-4 9 4-9 4-9-4zM3 7v10l9 4 9-4V7M12 11v10' },
-    { label: 'Add product', path: '/products/new', roles: ['seller'], group: 'main',
-      icon: 'M12 5v14M5 12h14' },
-    { label: 'Sales', path: '/sales', roles: ['seller'], group: 'main',
-      icon: 'M3 17l6-6 4 4 8-8M15 7h6v6' },
-    { label: 'Analytics', path: '/analytics', roles: ['seller'], group: 'main',
-      icon: 'M5 20V10M12 20V4M19 20v-7' },
-    {label: 'Create product', path: '/products/create', roles: ['seller'], group: 'main',
-      icon: 'M12 5v14M5 12h14'},
-  
-    // Account (shared)
-    { label: 'Profile', path: '/profile', roles: ['client', 'seller'], group: 'account',
-      icon: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0' },
-    { label: 'Settings', path: '/settings', roles: ['client', 'seller'], group: 'account',
-      icon: 'M4 7h10M18 7h2M4 17h2M10 17h10M14 5v4M6 15v4' },
-  ];
-  user = this.auth.user;
+  private readonly auth = inject(Auth);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly profileApi = inject(ProfileApi);
 
-  // computed() keeps these in sync if the user signal changes (login, logout, profile update)
-  readonly role = computed<UserRole | null>(() => {
-    const value = String(this.user()?.role ?? '').toLowerCase();
-    return value === 'seller' || value === 'client' ? value : null;
+
+  protected readonly user = this.auth.user;
+  protected readonly loading = signal(false);
+  protected readonly failed = signal(false);
+
+  // Two-way: [(collapsed)]="..." in the parent, or just leave it alone.
+  readonly collapsed = model(false);
+  readonly logout = output<void>();
+
+  // Accepts "SELLER" or "ROLE_SELLER"; anything else gets the least privileges.
+  private readonly role = computed<Role | null>(() => {
+    const raw = this.auth.role();
+    if (!raw) return null;
+    return String(raw).replace(/^ROLE_/, '').toUpperCase() === 'SELLER' ? 'SELLER' : 'CLIENT';
   });
-  readonly name = computed(() => this.user()?.name ?? '');
-  readonly email = computed(() => this.user()?.email ?? '');
 
-  readonly collapsed = signal(false);
+  protected readonly initials = computed(() =>
+    this.auth
+      .name()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0].toUpperCase())
+      .join(''),
+  );
 
-  readonly roleLabel = computed(() => (this.role() === 'seller' ? 'Seller' : 'Client'));
-  readonly initial = computed(() => (this.name().trim().charAt(0) || this.roleLabel().charAt(0)).toUpperCase());
-
-  private readonly visibleItems = computed(() => {
+  protected readonly roleLabel = computed(() => {
     const role = this.role();
-    return role ? this.NAV_ITEMS.filter((item) => item.roles.includes(role)) : [];
+    return role ? ROLE_LABELS[role] : '';
   });
 
-  readonly mainItems = computed(() => this.visibleItems().filter((i) => i.group === 'main'));
-  readonly accountItems = computed(() => this.visibleItems().filter((i) => i.group === 'account'));
+  protected readonly sections = computed(() => {
+    const role = this.role();
+    if (!role) return [];
 
-  readonly logoutIcon = 'M9 4H5v16h4M16 8l4 4-4 4M20 12H9';
+    return SECTIONS.map((section) => ({
+      title: section.title,
+      links: section.links.filter((link) => !link.roles || link.roles.includes(role)),
+    })).filter((section) => section.links.length > 0);
+  });
 
-  toggle(): void {
-    this.collapsed.update((v) => !v);
+  profilePicture$!: Observable<string>;
+
+  constructor() {
+    effect(() => {
+      const user = this.auth.user();
+
+      if (user?.id) {
+        this.profilePicture$ = this.getProfilePicture(user.id);
+      } else {
+        this.profilePicture$ = of('/public/default.png');
+      }
+    });
   }
 
-  logout(): void {
-    this.auth.logout();
-    this.router.navigate(['/login']);
+  protected toggle(): void {
+    this.collapsed.update((value) => !value);
+  }
 
+  protected retry(): void {
+    this.load();
+  }
+
+  private load(): void {
+    this.loading.set(true);
+    this.failed.set(false);
+
+    this.auth
+      .loadMe()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => this.loading.set(false),
+        error: () => {
+          this.failed.set(true);
+          this.loading.set(false);
+        },
+      });
+  }
+
+
+  getProfilePicture(userId: string): Observable<string> {
+    return this.profileApi.getProfilePicture(userId).pipe(
+      map(blob => {
+        console.log("-----------------")
+        return URL.createObjectURL(blob)
+
+      }),
+      catchError(err => {
+        console.error('Failed to load profile picture:', userId, err);
+        return of('http://localhost:4200//public/default.png');
+      })
+    );
   }
 }

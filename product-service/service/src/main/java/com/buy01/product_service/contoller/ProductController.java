@@ -2,6 +2,7 @@ package com.buy01.product_service.contoller;
 
 import com.buy01.product_service.dto.*;
 import com.buy01.product_service.model.Product;
+import com.buy01.product_service.model.ProductCategory;
 import com.buy01.product_service.service.ProductService;
 import jakarta.validation.Valid;
 import java.util.*;
@@ -48,8 +49,17 @@ public class ProductController {
     }
 
     @GetMapping("/products")
-    public ResponseEntity<List<Product>> getRecentProducts(@RequestParam(required = false) Long lastCreatedAt, @RequestParam(required = false) String lastId) {
-        List<Product> products = productService.getProductsByLastId(lastCreatedAt, lastId);
+    public ResponseEntity<List<Product>> getRecentProducts(
+        @RequestParam(required = false) Long lastCreatedAt,
+        @RequestParam(required = false) String lastId,
+        @RequestParam(required = false) ProductCategory category,
+        @RequestParam(defaultValue = "createdAt") String sortBy,
+        @RequestParam(defaultValue = "asc") String direction
+    ) {
+        List<Product> products = productService.getProductsByLastId(
+                lastCreatedAt, lastId, category, sortBy, direction
+        );
+    
         return ResponseEntity.ok(products);
     }
 

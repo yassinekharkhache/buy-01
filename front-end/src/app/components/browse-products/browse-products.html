@@ -1,0 +1,51 @@
+<section class="page" aria-labelledby="browse-title">
+  <header class="head">
+    <h1 id="browse-title" class="title">Browse products</h1>
+    <p class="subtitle">Discover what sellers are offering.</p>
+  </header>
+
+  @if (loadedOnce() && products().length === 0 && !failed()) {
+    <div class="empty">
+      <p class="empty-title">No products yet</p>
+      <p class="empty-text">Check back soon.</p>
+    </div>
+  }
+
+  <ul class="grid" aria-label="Products">
+    @for (product of products(); track product.id) {
+      <li>
+        <app-product-card [product]="product" [currency]="currency" [showWishlist]="showWishlist" />
+      </li>
+    }
+
+    @if (loading()) {
+      @for (n of skeletons; track n) {
+        <li class="skeleton" aria-hidden="true"></li>
+      }
+    }
+  </ul>
+
+  @if (loading()) {
+    <p class="sr-only" role="status">Loading products…</p>
+  }
+
+  @if (failed()) {
+    <div class="notice" role="alert">
+      <span class="badge" aria-hidden="true">!</span>
+      <p>We couldn't load products.</p>
+      <button type="button" class="btn-secondary" (click)="loadMore()">Try again</button>
+    </div>
+  }
+
+  @if (hasMore() && !loading() && !failed() && products().length > 0) {
+    <div class="more">
+      <button type="button" class="btn-secondary" (click)="loadMore()">Load more</button>
+    </div>
+  }
+
+  @if (!hasMore() && products().length > 0) {
+    <p class="end">You've reached the end.</p>
+  }
+
+  <div #sentinel class="sentinel" aria-hidden="true"></div>
+</section>

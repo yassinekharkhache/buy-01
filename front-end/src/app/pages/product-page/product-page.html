@@ -1,1 +1,135 @@
-<p>product-page works!</p>
+<section class="page" aria-label="Product">
+  <a class="back" routerLink="/products">
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+    Back to products
+  </a>
+
+  @switch (status()) {
+    @case ('loading') {
+      <div class="card skeleton" role="status" aria-label="Loading product"></div>
+    }
+
+    @case ('notfound') {
+      <div class="notice">
+        <span class="badge" aria-hidden="true">!</span>
+        <p>We couldn't find this product.</p>
+        <a class="btn-secondary" routerLink="/products">Browse products</a>
+      </div>
+    }
+
+    @case ('failed') {
+      <div class="notice" role="alert">
+        <span class="badge" aria-hidden="true">!</span>
+        <p>We couldn't load this product.</p>
+        <button type="button" class="btn-secondary" (click)="retry()">Try again</button>
+      </div>
+    }
+
+    @case ('ready') {
+      @if (product(); as p) {
+        <article class="card">
+          <!-- Gallery -->
+          <div class="gallery">
+            <div class="stage">
+              @if (selected(); as s) {
+                @if (s.url) {
+                  <img class="stage-image" [src]="s.url" [alt]="p.name + ', image ' + s.position" />
+                } @else if (s.status === 'error') {
+                  <div class="placeholder">
+                    <span class="badge" aria-hidden="true">!</span>
+                    <span>Image unavailable</span>
+                  </div>
+                } @else {
+                  <span class="spinner" role="status" aria-label="Loading image"></span>
+                }
+              } @else if (imagesLoading()) {
+                <span class="spinner" role="status" aria-label="Loading images"></span>
+              } @else {
+                <div class="placeholder">
+                  <svg class="icon icon-large" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M21 15l-5-5L5 21M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" />
+                  </svg>
+                  <span>No images</span>
+                </div>
+              }
+            </div>
+
+            @if (images().length > 1) {
+              <ul class="thumbs" aria-label="Product images">
+                @for (image of images(); track image.id) {
+                  <li>
+                    <button
+                      type="button"
+                      class="thumb"
+                      [class.active]="image.id === selectedId()"
+                      [attr.aria-pressed]="image.id === selectedId()"
+                      [attr.aria-label]="'Show image ' + image.position + (image.id === mainId() ? ' (main)' : '')"
+                      (click)="select(image.id)"
+                    >
+                      @if (image.url) {
+                        <img class="thumb-image" [src]="image.url" alt="" />
+                      }
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+
+          <!-- Info -->
+          <div class="info">
+            @if (categoryOption(); as category) {
+              <span class="pill">{{ category.emoji }} {{ category.label }}</span>
+            }
+
+            <h1 class="name">{{ p.name }}</h1>
+            <p class="price">{{ p.price | currency: currency }}</p>
+            <p class="stock" [class.is-out]="p.quantity <= 0">{{ stockLabel() }}</p>
+
+            <div>
+              <h2 class="section-title">Description</h2>
+              <p class="description">{{ p.description }}</p>
+            </div>
+
+            <dl class="meta">
+              <div>
+                <dt>Listed</dt>
+                <dd>{{ p.createdAt | date: 'mediumDate' }}</dd>
+              </div>
+            </dl>
+
+            <div class="actions">
+              <button
+                type="button"
+                class="btn-wish"
+                [class.is-on]="wishlisted()"
+                [disabled]="!wishlistReady() || wishlistBusy()"
+                [attr.aria-busy]="wishlistBusy()"
+                (click)="toggleWishlist()"
+              >
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                </svg>
+                {{ wishlisted() ? 'Remove from wish list' : 'Add to wish list' }}
+              </button>
+
+              <a class="btn-secondary" [routerLink]="['/profiles', p.userId]">View seller</a>
+            </div>
+
+            @if (wishlistNote(); as note) {
+              @if (note.kind === 'error') {
+                <p class="note" role="alert">
+                  <span class="badge" aria-hidden="true">!</span>{{ note.text }}
+                </p>
+              } @else {
+                <p class="note" role="status">{{ note.text }}</p>
+              }
+            }
+          </div>
+        </article>
+      }
+    }
+  }
+</section>

@@ -1,50 +1,84 @@
+:host {
+  display: block;
+}
+
 .layout {
+  position: relative;
+  isolation: isolate;
   display: flex;
-  height: 100vh;
-  width: 100vw;
-  margin: 0;
-  padding: 0;
-  background-image: url(../../../public/1.jpg);
-  background-repeat: no-repeat;
-  background-size: cover;
-  object-fit: cover;
-  background-position: center center;
-  
-  /* Keeps the background fixed in place while scrolling */
-  background-attachment: fixed;
+  min-height: 100dvh;
+  background:
+    /* linear-gradient(rgba(0, 119, 181, 0.35), rgba(0, 119, 181, 0.35)), */
+    linear-gradient(rgba(3,3,3,0.5),rgba(50,50,50,0.5)),
+    url('/1.jpg') center / cover fixed;
 }
 
-.sidebar{
-    margin: 0px;
-    padding: 0px;
+/* Blurred white shapes behind the glass */
+.layout::before,
+.layout::after {
+  content: '';
+  position: fixed;
+  z-index: -1;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  filter: blur(80px);
+  pointer-events: none;
 }
 
-.content{
-    margin: 0;
-    padding: 0;
+.layout::before {
+  width: 320px;
+  height: 320px;
+  top: 8%;
+  left: -60px;
 }
 
-/* Main content */
+.layout::after {
+  width: 260px;
+  height: 260px;
+  bottom: 6%;
+  left: 140px;
+}
+
+.sidebar {
+  box-sizing: border-box;
+  flex: none;
+  position: sticky;
+  top: 0;
+  width: 290px;
+  height: 100dvh;
+  padding: 16px;
+  transition: width 0.2s ease;
+}
+
+.sidebar.collapsed {
+  width: 96px;
+}
+
 .main-content {
   flex: 1;
-  height: 100vh;
-  margin: 0;
-  padding: 0;
   min-width: 0;
-  overflow-x: hidden;
+  padding: 24px;
+  color: rgb(255, 255, 255);
 }
 
-/* Responsive */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar {
+    transition: none;
+  }
+}
+
 @media (max-width: 768px) {
   .layout {
     flex-direction: column;
-    margin: 0;
-    padding: 0;
   }
 
-  .main-content {
-    padding: 20px 16px;
-    margin: 0;
-    padding: 0;
+  .sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+  }
+
+  .sidebar.collapsed {
+    width: 100%;
   }
 }

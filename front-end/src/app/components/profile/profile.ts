@@ -1,12 +1,3 @@
-// import { Component } from '@angular/core';
-
-// @Component({
-//   imports: [],
-//   selector: 'app-profile',
-//   styleUrl: './profile.css',
-//   templateUrl: './profile.html',
-// })
-// export class Profile {}
 import {
   ChangeDetectionStrategy,
   Component,
@@ -17,6 +8,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
   FormBuilder,
@@ -25,10 +17,9 @@ import {
   Validators,
 } from '@angular/forms';
 
-import { forkJoin, Observable } from 'rxjs';
 import { Auth } from '../../services/auth/auth';
 import { SnackbarService } from '../../components/snackbar/snackbar.service';
-import { ProfileService } from './profile.service';
+import { ProfileApi } from '../../services/profile-api/profile-api';
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2 MB
 
@@ -59,8 +50,9 @@ function passwordRules(group: AbstractControl): ValidationErrors | null {
 export class Profile {
   private readonly fb = inject(FormBuilder).nonNullable;
   private readonly auth = inject(Auth);
-  private readonly profileApi = inject(ProfileService);
   private readonly snackbar = inject(SnackbarService);
+  private readonly profileApi = inject(ProfileApi);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly user = this.auth.user;
 
@@ -75,10 +67,11 @@ export class Profile {
     { validators: passwordRules },
   );
 
-  // ---- avatar ----
+  // ---- avatar (saved on its own, separate from the details form) ----
   readonly avatarFile = signal<File | null>(null);
   readonly avatarPreview = signal<string | null>(null);
   readonly avatarError = signal<string | null>(null);
+  readonly uploadingAvatar = signal(false);
 
   readonly avatarUrl = computed(() => {
     const current = (this.user() as unknown as { avatar?: string } | null)?.avatar;
@@ -102,7 +95,7 @@ export class Profile {
       });
     });
 
-    inject(DestroyRef).onDestroy(() => this.revokePreview());
+    this.destroyRef.onDestroy(() => this.revokePreview());
   }
 
   // ---------- avatar ----------
@@ -134,12 +127,45 @@ export class Profile {
     this.avatarError.set(null);
   }
 
+  uploadAvatar(): void {
+    const file = this.avatarFile();
+    if (!file || this.uploadingAvatar()) return;
+
+    this.uploadingAvatar.set(true);
+
+    this.profileApi
+      .uploadProfilePicture(file)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          // Refresh the signed-in user first, then drop the local preview.
+          this.auth
+            .loadMe()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+              next: () => this.finishAvatarUpload(),
+              error: () => this.finishAvatarUpload(),
+            });
+        },
+        error: () => {
+          this.uploadingAvatar.set(false);
+          this.snackbar.error('Could not upload profile picture. Please try again.');
+        },
+      });
+  }
+
+  private finishAvatarUpload(): void {
+    this.uploadingAvatar.set(false);
+    this.discardAvatar();
+    this.snackbar.success('Profile picture updated.');
+  }
+
   private revokePreview(): void {
     const url = this.avatarPreview();
     if (url) URL.revokeObjectURL(url);
   }
 
-  // ---------- form ----------
+  // ---------- details form ----------
   togglePasswords(): void {
     this.showPasswords.update((v) => !v);
   }
@@ -149,7 +175,7 @@ export class Profile {
   }
 
   hasChanges(): boolean {
-    return this.form.dirty || this.avatarFile() !== null;
+    return this.form.dirty;
   }
 
   save(): void {
@@ -157,55 +183,48 @@ export class Profile {
       this.form.markAllAsTouched();
       return;
     }
+    if (this.saving()) return;
 
-    const value = this.form.getRawValue();
-    const current = this.user();
-    const name = value.name.trim();
-    const email = value.email.trim();
+    const formValue = this.form.getRawValue();
 
-    // Send only what actually changed
-    const data = new FormData();
-    if (name !== (current?.name ?? '')) data.append('name', name);
-    if (email !== (current?.email ?? '')) data.append('email', email);
-    const file = this.avatarFile();
-    if (file) data.append('avatar', file);
-
-    const profileChanged = [...data.keys()].length > 0;
-    const passwordChanged = !!value.newPassword;
-
-    if (!profileChanged && !passwordChanged) {
-      this.snackbar.info('Nothing to save.');
-      return;
-    }
-
-    const requests: Observable<unknown>[] = [];
-    if (profileChanged) requests.push(this.profileApi.updateProfile(data));
-    if (passwordChanged) {
-      requests.push(
-        this.profileApi.changePassword({
-          currentPassword: value.currentPassword,
-          newPassword: value.newPassword,
-        }),
-      );
-    }
+    const data = {
+      name: formValue.name,
+      email: formValue.email,
+      ...(formValue.currentPassword ? { currentPassword: formValue.currentPassword } : {}),
+      ...(formValue.newPassword ? { password: formValue.newPassword } : {}),
+    };
 
     this.saving.set(true);
-    forkJoin(requests).subscribe({
-      next: () => {
-        this.saving.set(false);
-        this.snackbar.success('Profile updated.');
-        this.discardAvatar();
-        this.form.patchValue({ currentPassword: '', newPassword: '', confirmPassword: '' });
-        this.form.markAsPristine();
-        this.form.markAsUntouched();
-        // TODO: refresh the signed-in user in your Auth service so the sidebar updates,
-        // e.g. this.auth.refreshUser() or set the user signal with the API response.
-      },
-      error: () => {
-        this.saving.set(false);
-        this.snackbar.error('Could not save your changes. Please try again.');
-      },
-    });
+
+    this.profileApi
+      .updateProfile(data)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (rep) => {
+          this.auth.setToken(rep.token);
+
+          // loadMe() is cold: it only runs when subscribed.
+          this.auth
+            .loadMe()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+              next: () => this.finishSave(),
+              error: () => this.finishSave(),
+            });
+        },
+        error: (err: unknown) => {
+          console.error('Failed to update profile:', err);
+          this.saving.set(false);
+          this.snackbar.error('Failed to update profile. Please try again.');
+        },
+      });
+  }
+
+  private finishSave(): void {
+    this.saving.set(false);
+    this.form.patchValue({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    this.form.markAsPristine();
+    this.snackbar.success('Profile updated successfully!');
   }
 
   resetForm(): void {
@@ -217,6 +236,5 @@ export class Profile {
       newPassword: '',
       confirmPassword: '',
     });
-    this.discardAvatar();
   }
 }

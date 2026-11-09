@@ -1,0 +1,121 @@
+<section class="page" aria-labelledby="wishlist-title">
+  <header>
+    <h1 id="wishlist-title" class="title">Wish list</h1>
+    @if (status() === 'ready' && items().length > 0) {
+      <p class="subtitle">{{ items().length }} {{ items().length === 1 ? 'product' : 'products' }} you saved</p>
+    }
+  </header>
+
+  @switch (status()) {
+    @case ('loading') {
+      <div class="card skeleton" role="status" aria-label="Loading your wish list"></div>
+    }
+
+    @case ('failed') {
+      <div class="notice" role="alert">
+        <span class="badge" aria-hidden="true">!</span>
+        <p>We couldn't load your wish list.</p>
+        <button type="button" class="btn-secondary" (click)="load()">Try again</button>
+      </div>
+    }
+
+    @case ('ready') {
+      @if (note(); as message) {
+        <p class="note" role="alert"><span class="badge" aria-hidden="true">!</span>{{ message }}</p>
+      }
+
+      @if (items().length === 0) {
+        <div class="notice empty">
+          <p>Your wish list is empty.</p>
+          <a class="btn-secondary" routerLink="/products">Browse products</a>
+        </div>
+      } @else {
+        <div class="card">
+          <div class="scroll" role="region" aria-label="Wish list table" tabindex="0">
+            <table class="table">
+              <caption class="sr-only">
+                Your wish list, {{ sortDescription() }}
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col" [attr.aria-sort]="ariaSort('name')">
+                    <button type="button" class="sort" (click)="sortBy('name')">
+                      Name
+                      @if (ariaSort('name') === 'ascending') {
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
+                      } @else if (ariaSort('name') === 'descending') {
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M19 12l-7 7-7-7" /></svg>
+                      } @else {
+                        <svg class="icon dim" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 15 5 5 5-5M7 9l5-5 5 5" /></svg>
+                      }
+                    </button>
+                  </th>
+                  <th scope="col">Category</th>
+                  <th scope="col" class="num" [attr.aria-sort]="ariaSort('price')">
+                    <button type="button" class="sort sort-end" (click)="sortBy('price')">
+                      Price
+                      @if (ariaSort('price') === 'ascending') {
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
+                      } @else if (ariaSort('price') === 'descending') {
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M19 12l-7 7-7-7" /></svg>
+                      } @else {
+                        <svg class="icon dim" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 15 5 5 5-5M7 9l5-5 5 5" /></svg>
+                      }
+                    </button>
+                  </th>
+                  <th scope="col">Availability</th>
+                  <th scope="col"><span class="sr-only">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of sorted(); track item.id) {
+                  <tr>
+                    <th scope="row" class="cell-name">
+                      @let thumb = thumbs()[item.id];
+                      <div class="product">
+                        <a class="thumb-link" [routerLink]="['/products', item.id]" tabindex="-1" aria-hidden="true">
+                          @if (thumb) {
+                            <img class="thumb-image" [src]="thumb" alt="" />
+                          } @else if (thumb === null) {
+                            <span class="thumb-fill">
+                              <svg class="icon icon-large" viewBox="0 0 24 24">
+                                <path d="M21 15l-5-5L5 21M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" />
+                              </svg>
+                            </span>
+                          } @else {
+                            <span class="thumb-fill thumb-loading"></span>
+                          }
+                        </a>
+                        <a class="link" [routerLink]="['/products', item.id]">{{ item.name }}</a>
+                      </div>
+                    </th>
+                    <td>
+                      @if (categoryOf(item); as category) {
+                        {{ category.emoji }} {{ category.label }}
+                      }
+                    </td>
+                    <td class="num price">{{ item.price | currency: currency }}</td>
+                    <td>
+                      <span class="stock" [class.is-out]="item.quantity <= 0">{{ stockLabel(item.quantity) }}</span>
+                    </td>
+                    <td class="actions">
+                      <button
+                        type="button"
+                        class="btn-secondary small"
+                        [attr.aria-label]="'Remove ' + item.name + ' from wish list'"
+                        [disabled]="removingIds().has(item.id)"
+                        (click)="remove(item)"
+                      >
+                        {{ removingIds().has(item.id) ? 'Removing…' : 'Remove' }}
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    }
+  }
+</section>

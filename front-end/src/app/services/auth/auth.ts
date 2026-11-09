@@ -16,8 +16,6 @@ export class Auth {
   private readonly platformId = inject(PLATFORM_ID);
   
   readonly user = this.currentUser.asReadonly();
-  
-  readonly isLoggedIn = computed(() => this.user() !== null);
 
   readonly role = computed(() => this.user()?.role ?? null);
 

@@ -6,22 +6,26 @@ import com.buy01.product_service.kafka.ProductEventProducer;
 import com.buy01.product_service.exception.InvalidProductUpdateException;
 import com.buy01.product_service.exception.ForbiddenException;
 import com.buy01.product_service.model.Product;
-import com.buy01.product_service.repository.productRepository;
-import java.util.List;
-import lombok.AllArgsConstructor;
+import com.buy01.product_service.model.ProductCategory;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.MongoTemplate;
+
+import com.buy01.product_service.repository.ProductRepository;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import java.util.UUID;
-
+import java.util.List;
+import lombok.AllArgsConstructor;
 
 @Service
 @AllArgsConstructor
 public class ProductService {
-    private final productRepository productRepository;
+    private final ProductRepository productRepository;
     private final ProductEventProducer eventProducer;
+    private final MongoTemplate mongoTemplate;
 
     // add product (Create)
     public void addProduct(AddProduct product, String userId) {
@@ -88,24 +92,76 @@ public class ProductService {
                 .orElseThrow(() -> new ProductNotFoundException(productId));
     }
     
-    // get 10 products by lastId (Read)
-    public List<Product> getProductsByLastId(Long lastCreatedAt, String lastId) {
-        Pageable page = PageRequest.of(0, 10);
-
-        if (lastCreatedAt == null || lastId == null) {
-            return productRepository.findAll(PageRequest.of(0, 10, Sort.by(Sort.Order.asc("createdAt"),Sort.Order.asc("id")).ascending())).getContent();
-        }
-
-        return productRepository.findByCreatedAtGreaterThanOrCreatedAtEqualsAndIdGreaterThanOrderByCreatedAtAscIdAsc(
-            lastCreatedAt,
-            lastCreatedAt,
-            lastId,
-            page
-        );
-    }
-
+    
+    
     public List<Product> getMyProducts(String userId) {
         return productRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
 
+    // get 10 products by lastId (Read)
+    public List<Product> getProductsByLastId(
+            Long lastCreatedAt,
+            String lastId,
+            ProductCategory category,
+            String sortBy,
+            String direction
+    ) {
+
+        // Allowed sorting fields
+        List<String> allowedFields = List.of(
+                "createdAt",
+                "name",
+                "price"
+        );
+
+        if (!allowedFields.contains(sortBy)) {
+            throw new IllegalArgumentException("Invalid sort field");
+        }
+
+        Sort.Direction sortDirection =
+                direction.equalsIgnoreCase("desc")
+                        ? Sort.Direction.DESC
+                        : Sort.Direction.ASC;
+
+        Query query = new Query();
+
+        // Category filter
+        if (category != null) {
+            query.addCriteria(
+                    Criteria.where("category").is(category)
+            );
+        }
+
+        // Cursor pagination (currently for createdAt sorting)
+        if (lastCreatedAt != null && lastId != null
+                && sortBy.equals("createdAt")) {
+
+            query.addCriteria(
+                    new Criteria().orOperator(
+                            Criteria.where("createdAt")
+                                    .gt(lastCreatedAt),
+
+                            new Criteria().andOperator(
+                                    Criteria.where("createdAt")
+                                            .is(lastCreatedAt),
+                                    Criteria.where("_id")
+                                            .gt(lastId)
+                            )
+                    )
+            );
+        }
+
+        // Sorting
+        query.with(Sort.by(
+                sortDirection,
+                sortBy,
+                "_id"
+        ));
+
+        // Limit to 10
+        query.limit(10);
+
+        return mongoTemplate.find(query, Product.class);
+    }
+    
 }

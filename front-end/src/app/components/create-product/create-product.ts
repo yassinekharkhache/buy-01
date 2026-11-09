@@ -1,348 +1,351 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  afterNextRender,
   computed,
   inject,
-  signal} from '@angular/core';
-
-import { HttpEventType } from '@angular/common/http';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable, Subscription, finalize, of, shareReplay, switchMap, tap } from 'rxjs';
-import { SnackbarService } from '../../components/snackbar/snackbar.service';
-import { MediaService } from './media.service';
-import { ProductService } from './product.service';
-
-export type ImageStatus = 'uploading' | 'confirmed' | 'error' | 'deleting';
-
-export interface ImageItem {
-  id: number;
-  file: File;
-  previewUrl: string;
-  status: ImageStatus;
-  progress: number;
-  /** Set once the backend has confirmed the upload */
-  imageId?: string;
-}
-
-export interface ImageItem {
-  id: number;
-  file: File;
-  previewUrl: string;
-  serverUrl?: string;
-  status: ImageStatus;
-  progress: number;
-  imageId?: string;
-}
+  signal,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormControl, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { ProductApi } from '../../services/product-api/product-api';
+import { AddProductRequest } from '../../services/product-api/product.models';
+import { CATEGORY_OPTIONS, ProductCategory } from '../../services/product-api/product-category';
 
 const MAX_IMAGES = 6;
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB each
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const POSITIONS = [1, 2, 3, 4, 5, 6] as const; // backend positions are 1-based
+const SNACK_MS = 5000;
+const LABELS = {
+  name: 'Name',
+  category: 'Category',
+  description: 'Description',
+  price: 'Price',
+  quantity: 'Quantity',
+} as const;
+
+type Field = keyof typeof LABELS;
+type UploadStatus = 'uploading' | 'done' | 'error' | 'deleting';
+type SessionState = 'loading' | 'ready' | 'failed';
+
+interface ProductImage {
+  key: string;
+  position: number;
+  file: File;
+  previewUrl: string;
+  status: UploadStatus;
+  serverId: string | null;
+}
+
+interface Snack {
+  kind: 'success' | 'fail';
+  text: string;
+}
+
+const notBlank: ValidatorFn = (control) =>
+  String(control.value ?? '').trim() ? null : { required: true };
+
+const wholeNumber: ValidatorFn = (control) =>
+  control.value === null || Number.isInteger(control.value) ? null : { integer: true };
 
 @Component({
   selector: 'app-create-product',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, RouterLink],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './create-product.html',
   styleUrl: './create-product.css',
-  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CreateProduct {
-  private readonly fb = inject(FormBuilder).nonNullable;
-  private readonly media = inject(MediaService);
-  private readonly productApi = inject(ProductService);
-  private readonly snackbar = inject(SnackbarService);
+  private readonly api = inject(ProductApi);
+  private readonly destroyRef = inject(DestroyRef);
 
-  readonly maxImages = MAX_IMAGES;
-  readonly currency = '$'; // change to your currency symbol
+  private nextKey = 0;
+  private snackTimer: ReturnType<typeof setTimeout> | undefined;
 
-  readonly form = this.fb.group({
-    name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(80)]],
-    price: this.fb.control<number | null>(null, [Validators.required, Validators.min(0.01)]),
-    quantity: this.fb.control<number | null>(1, [
-      Validators.required,
-      Validators.min(0),
-      Validators.pattern(/^\d+$/),
-    ]),
-    description: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(1000)]],
+  protected readonly maxImages = MAX_IMAGES;
+  protected readonly categories = CATEGORY_OPTIONS;
+
+  // The session lives only in this component: refresh or leaving the route drops it.
+  protected readonly sessionId = signal<string | null>(null);
+  protected readonly sessionState = signal<SessionState>('loading');
+
+  protected readonly images = signal<ProductImage[]>([]);
+  private readonly coverPosition = signal<number | null>(null);
+
+  protected readonly submitting = signal(false);
+  protected readonly submitted = signal(false);
+  protected readonly snack = signal<Snack | null>(null);
+
+  protected readonly form = new FormGroup({
+    name: new FormControl('', {
+      nonNullable: true,
+      validators: [notBlank, Validators.minLength(3), Validators.maxLength(70)],
+    }),
+    category: new FormControl<ProductCategory | ''>('', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    description: new FormControl('', {
+      nonNullable: true,
+      validators: [notBlank, Validators.minLength(10), Validators.maxLength(500)],
+    }),
+    price: new FormControl<number | null>(null, {
+      validators: [Validators.required, Validators.min(0.01), Validators.max(1_000_000)],
+    }),
+    quantity: new FormControl<number | null>(null, {
+      validators: [Validators.required, Validators.min(0), Validators.max(1_000_000), wholeNumber],
+    }),
   });
 
-  // ---- images ----
-  private nextId = 0;
-  private readonly uploads = new Map<number, Subscription>();
-  private sessionId: string | null = null;
-  private session$: Observable<string> | null = null;
+  protected readonly sortedImages = computed(() =>
+    [...this.images()].sort((a, b) => a.position - b.position),
+  );
 
-  readonly images = signal<ImageItem[]>([]);
-  readonly imageError = signal<string | null>(null);
-  readonly dragging = signal(false);
-  readonly saving = signal(false);
+  private readonly doneImages = computed(() =>
+    this.images().filter((image) => image.status === 'done'),
+  );
 
-  readonly slotsLeft = computed(() => MAX_IMAGES - this.images().length);
-  readonly canAddMore = computed(() => this.slotsLeft() > 0);
+  protected readonly pendingCount = computed(
+    () =>
+      this.images().filter((image) => image.status === 'uploading' || image.status === 'deleting')
+        .length,
+  );
 
-  /**
-   * empty   -> no image yet
-   * pending -> something is still uploading or being removed
-   * failed  -> at least one upload failed (not confirmed by the backend)
-   * ready   -> every image is confirmed
-   */
-  readonly uploadState = computed<'empty' | 'pending' | 'failed' | 'ready'>(() => {
-    const list = this.images();
-    if (list.length === 0) return 'empty';
-    if (list.some((i) => i.status === 'error')) return 'failed';
-    if (list.some((i) => i.status !== 'confirmed')) return 'pending';
-    return 'ready';
+  // Cover = the chosen image, otherwise the lowest-position uploaded image.
+  protected readonly cover = computed<number | null>(() => {
+    const done = this.doneImages();
+    const chosen = this.coverPosition();
+    if (chosen !== null && done.some((image) => image.position === chosen)) return chosen;
+    return done.length ? Math.min(...done.map((image) => image.position)) : null;
   });
 
-  /** The create button is disabled unless at least one image exists and all are confirmed. */
-  readonly canSubmit = computed(() => this.uploadState() === 'ready' && !this.saving());
+  protected readonly canCreate = computed(
+    () =>
+      this.sessionId() !== null &&
+      this.pendingCount() === 0 &&
+      this.doneImages().length > 0 &&
+      !this.submitting(),
+  );
 
-  readonly submitHint = computed(() => {
-    switch (this.uploadState()) {
-      case 'empty':
-        return 'Add at least one photo to continue.';
-      case 'pending':
-        return 'Waiting for your photos to finish uploading…';
-      case 'failed':
-        return 'Some photos failed to upload. Retry or remove them.';
-      default:
-        return null;
-    }
+  protected readonly hint = computed(() => {
+    if (this.pendingCount() > 0) return 'Waiting for images to finish…';
+    if (this.doneImages().length === 0) return 'Add at least one image to continue.';
+    return '';
   });
 
   constructor() {
-    // Leaving the page without saving: free the uploaded images on the server
-    inject(DestroyRef).onDestroy(() => this.discardRemote());
-  }
+    // Browser only: the request needs the stored token.
+    afterNextRender(() => this.startSession());
 
-  // ---------- upload session ----------
-  /** Creates the upload session once; parallel uploads share the same request. */
-  private ensureSession(): Observable<string> {
-    if (this.sessionId) return of(this.sessionId);
-
-    this.session$ ??= this.media.createSession().pipe(
-      tap((id) => (this.sessionId = id)),
-      finalize(() => (this.session$ = null)),
-      shareReplay({ bufferSize: 1, refCount: false }),
-    );
-    return this.session$;
-  }
-
-  // ---------- image handling ----------
-  onFilesSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const files = Array.from(input.files ?? []);
-    input.value = ''; // allow picking the same file again
-    this.addFiles(files);
-  }
-
-  onDragOver(event: DragEvent): void {
-    event.preventDefault();
-    if (this.canAddMore()) this.dragging.set(true);
-  }
-
-  onDragLeave(): void {
-    this.dragging.set(false);
-  }
-
-  onDrop(event: DragEvent): void {
-    event.preventDefault();
-    this.dragging.set(false);
-    this.addFiles(Array.from(event.dataTransfer?.files ?? []));
-  }
-
-  private addFiles(files: File[]): void {
-    if (!files.length) return;
-
-    let error: string | null = null;
-    const accepted: File[] = [];
-
-    for (const file of files) {
-      if (!ALLOWED_TYPES.includes(file.type)) {
-        error = 'Only JPG, PNG or WebP images are allowed.';
-      } else if (file.size > MAX_IMAGE_BYTES) {
-        error = 'Each image must be 5 MB or smaller.';
-      } else {
-        accepted.push(file);
-      }
-    }
-
-    const room = this.slotsLeft();
-    if (accepted.length > room) {
-      error = `You can add up to ${MAX_IMAGES} photos. Extra files were ignored.`;
-    }
-
-    const items: ImageItem[] = accepted.slice(0, room).map((file) => ({
-      id: ++this.nextId,
-      file,
-      previewUrl: URL.createObjectURL(file),
-      status: 'uploading',
-      progress: 0,
-    }));
-
-    this.images.update((list) => [...list, ...items]);
-    this.imageError.set(error);
-
-    items.forEach((item) => this.upload(item));
-  }
-
-  private upload(item: ImageItem): void {
-    this.patch(item.id, { status: 'uploading', progress: 0 });
-
-    const sub = this.ensureSession()
-      .pipe(
-        // position is read when the request fires, so it matches the current order (0 = cover)
-        switchMap((sessionId) =>
-          this.media.uploadImage(sessionId, item.file, this.positionOf(item.id)),
-        ),
-        finalize(() => this.uploads.delete(item.id)),
-      )
-      .subscribe({
-        next: (event) => {
-          if (event.type === HttpEventType.UploadProgress && event.total) {
-            this.patch(item.id, { progress: Math.round((100 * event.loaded) / event.total) });
-          } else if (event.type === HttpEventType.Response) {
-            // Confirmed by the backend: it answers with the image id (its file name)
-            const imageId = event.body?.id;
-            this.patch(
-              item.id,
-              imageId
-                ? {
-                    status: 'confirmed',
-                    progress: 100,
-                    imageId,
-                    serverUrl: this.media.previewUrl(imageId),
-                  }
-                : { status: 'error' },
-            );
-          }
-        },
-        error: () => this.patch(item.id, { status: 'error' }),
-      });
-
-    this.uploads.set(item.id, sub);
-  }
-
-  /** Zero-based index of an image in the list. Position 0 is the cover. */
-  private positionOf(id: number): number {
-    return Math.max(0, this.images().findIndex((i) => i.id === id));
-  }
-
-  /** If the server preview cannot be loaded, fall back to the local preview. */
-  useLocalPreview(id: number): void {
-    this.patch(id, { serverUrl: undefined });
-  }
-
-  retry(id: number): void {
-    const item = this.images().find((i) => i.id === id);
-    if (item?.status === 'error') this.upload(item);
-  }
-
-  removeImage(id: number): void {
-    const item = this.images().find((i) => i.id === id);
-    if (!item || item.status === 'deleting') return;
-
-    // Cancel an upload that is still running
-    this.uploads.get(id)?.unsubscribe();
-    this.uploads.delete(id);
-    this.imageError.set(null);
-
-    if (item.status === 'confirmed' && item.imageId) {
-      this.patch(id, { status: 'deleting' });
-      this.media.deleteImage(item.imageId).subscribe({
-        next: () => this.dropLocal(id),
-        error: () => {
-          this.patch(id, { status: 'confirmed' });
-          this.snackbar.error('Could not remove the photo. Please try again.');
-        },
-      });
-    } else {
-      this.dropLocal(id);
-    }
-  }
-
-  makeCover(id: number): void {
-    this.images.update((list) => {
-      const picked = list.find((i) => i.id === id);
-      return picked ? [picked, ...list.filter((i) => i.id !== id)] : list;
+    this.destroyRef.onDestroy(() => {
+      clearTimeout(this.snackTimer);
+      this.images().forEach((image) => URL.revokeObjectURL(image.previewUrl));
     });
   }
 
-  private patch(id: number, changes: Partial<ImageItem>): void {
-    this.images.update((list) => list.map((i) => (i.id === id ? { ...i, ...changes } : i)));
+  protected retrySession(): void {
+    this.startSession();
   }
 
-  private dropLocal(id: number): void {
-    const item = this.images().find((i) => i.id === id);
-    if (item) URL.revokeObjectURL(item.previewUrl);
-    this.images.update((list) => list.filter((i) => i.id !== id));
+  protected onFiles(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const picked = Array.from(input.files ?? []);
+    input.value = ''; // lets the same file be picked again
+
+    if (!this.sessionId() || picked.length === 0) return;
+
+    const files = picked.filter((file) => file.type.startsWith('image/'));
+    if (files.length < picked.length) this.notify('fail', 'Only image files can be uploaded.');
+
+    const used = new Set(this.images().map((image) => image.position));
+    const free = POSITIONS.filter((position) => !used.has(position));
+    if (files.length > free.length) this.notify('fail', `You can add up to ${MAX_IMAGES} images.`);
+
+    const added = files.slice(0, free.length).map(
+      (file, index): ProductImage => ({
+        key: `image-${this.nextKey++}`,
+        position: free[index],
+        file,
+        previewUrl: URL.createObjectURL(file),
+        status: 'uploading',
+        serverId: null,
+      }),
+    );
+    if (added.length === 0) return;
+
+    this.images.update((list) => [...list, ...added]);
+    added.forEach((image) => this.upload(image));
   }
 
-  // ---------- form ----------
-  touched(name: 'name' | 'price' | 'quantity' | 'description'): boolean {
-    return this.form.controls[name].touched;
+  protected retry(image: ProductImage): void {
+    this.patch(image.key, { status: 'uploading' });
+    this.upload(image);
   }
 
-  save(): void {
-    if (!this.canSubmit()) return;
+  protected setCover(image: ProductImage): void {
+    this.coverPosition.set(image.position);
+  }
 
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
+  protected remove(image: ProductImage): void {
+    if (image.serverId === null) {
+      this.dropLocal(image);
       return;
     }
 
-    const value = this.form.getRawValue();
-    const imageIds = this.images().flatMap((i) => (i.imageId ? [i.imageId] : []));
+    const wasCover = this.cover() === image.position;
+    this.patch(image.key, { status: 'deleting' });
 
-    this.saving.set(true);
-    this.productApi
-      .create({
-        name: value.name.trim(),
-        price: Number(value.price),
-        quantity: Number(value.quantity),
-        description: value.description.trim(),
-        uploadSessionId: this.sessionId ?? '',
-        imageIds,
-      })
+    this.api
+      .deleteImage(image.serverId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
-          this.saving.set(false);
-          this.snackbar.success('Product created.');
-          // Images now belong to the product, so only reset locally (no deletes)
-          this.resetLocal();
+          this.dropLocal(image);
+          if (wasCover) this.coverPosition.set(this.lowestDonePosition());
         },
-        error: (err) => {
-          this.saving.set(false);
-          console.log(err)
-          this.snackbar.error('Could not create the product. Please try again.');
+        error: () => {
+          this.patch(image.key, { status: 'done' });
+          this.notify('fail', 'Could not remove the image. Try again.');
         },
       });
   }
 
-  /** "Clear" button: also deletes the uploaded images from the server. */
-  clear(): void {
-    this.discardRemote();
-    this.resetLocal();
+  protected submit(): void {
+    this.submitted.set(true);
+    this.form.markAllAsTouched();
+
+    const sessionId = this.sessionId();
+    const cover = this.cover();
+    if (this.form.invalid || !sessionId || cover === null || !this.canCreate()) return;
+
+    const value = this.form.getRawValue();
+    if (value.category === '') return;
+
+    const body: AddProductRequest = {
+      name: value.name.trim(),
+      category: value.category,
+      description: value.description.trim(),
+      price: Number(value.price),
+      quantity: Number(value.quantity),
+      uploadSessionId: sessionId,
+      mainPicPosition: cover,
+    };
+
+    this.submitting.set(true);
+
+    this.api
+      .createProduct(body)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.submitting.set(false);
+          this.notify('success', 'Product created successfully.');
+          this.resetPage();
+        },
+        error: (error: unknown) => {
+          this.submitting.set(false);
+          this.notify('fail', this.errorText(error, 'Could not create the product.'));
+        },
+      });
   }
 
-  /** Best-effort cleanup of images that were uploaded but never attached to a product. */
-  private discardRemote(): void {
-    this.uploads.forEach((sub) => sub.unsubscribe());
-    this.uploads.clear();
+  // Template helper: one message per field, shown after touch or submit.
+  protected message(field: Field): string | null {
+    const control = this.form.controls[field];
+    const errors = control.errors;
+    if (!errors || !(control.touched || this.submitted())) return null;
 
-    this.images().forEach((img) => {
-      if (img.imageId) {
-        this.media.deleteImage(img.imageId).subscribe({ error: () => undefined });
-      }
-    });
+    const label = LABELS[field];
+    if (errors['required']) return `${label} is required`;
+    if (errors['minlength']) return `${label} must be at least ${errors['minlength'].requiredLength} characters`;
+    if (errors['maxlength']) return `${label} must be at most ${errors['maxlength'].requiredLength} characters`;
+    if (errors['integer']) return `${label} must be a whole number`;
+    if (errors['min']) return field === 'price' ? 'Price must be positive' : 'Quantity cannot be negative';
+    if (errors['max']) return `${label} must not exceed 1,000,000`;
+    return `${label} is not valid`;
   }
 
-  private resetLocal(): void {
-    this.images().forEach((i) => URL.revokeObjectURL(i.previewUrl));
+  private startSession(): void {
+    this.sessionState.set('loading');
+    this.sessionId.set(null);
+
+    this.api
+      .createUploadSession()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (session) => {
+          this.sessionId.set(session.id);
+          this.sessionState.set('ready');
+        },
+        error: (error: unknown) => {
+          console.error('Upload session failed', error);
+          this.sessionState.set('failed');
+          this.notify('fail', this.errorText(error, 'Could not start the upload session.'));
+        },
+      });
+  }
+
+  private upload(image: ProductImage): void {
+    const sessionId = this.sessionId();
+    if (!sessionId) {
+      this.patch(image.key, { status: 'error' });
+      return;
+    }
+
+    this.api
+      .uploadImage(sessionId, image.file, image.position)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => this.patch(image.key, { status: 'done', serverId: response.id }),
+        error: (error: unknown) => {
+          console.error('Image upload failed', error);
+          this.patch(image.key, { status: 'error' });
+          this.notify('fail', this.errorText(error, 'Image upload failed.'));
+        },
+      });
+  }
+
+  private patch(key: string, changes: Partial<ProductImage>): void {
+    this.images.update((list) =>
+      list.map((image) => (image.key === key ? { ...image, ...changes } : image)),
+    );
+  }
+
+  private dropLocal(image: ProductImage): void {
+    URL.revokeObjectURL(image.previewUrl);
+    this.images.update((list) => list.filter((item) => item.key !== image.key));
+  }
+
+  private lowestDonePosition(): number | null {
+    const done = this.doneImages();
+    return done.length ? Math.min(...done.map((image) => image.position)) : null;
+  }
+
+  private resetPage(): void {
+    this.images().forEach((image) => URL.revokeObjectURL(image.previewUrl));
     this.images.set([]);
-    this.imageError.set(null);
-    this.sessionId = null; // the next upload starts a fresh session
-    this.session$ = null;
-    this.form.reset({ name: '', price: null, quantity: 1, description: '' });
+    this.coverPosition.set(null);
+    this.form.reset();
+    this.submitted.set(false);
+    this.startSession(); // the previous session was consumed by the product
+  }
+
+  private notify(kind: Snack['kind'], text: string): void {
+    clearTimeout(this.snackTimer);
+    this.snack.set({ kind, text });
+    this.snackTimer = setTimeout(() => this.snack.set(null), SNACK_MS);
+  }
+
+  private errorText(error: unknown, fallback: string): string {
+    if (!(error instanceof HttpErrorResponse)) return fallback;
+
+    if (error.status === 0) return `${fallback} Server unreachable (network, CORS or wrong URL).`;
+    if (error.status === 413) return `${fallback} File too large for the server (413).`;
+    if (typeof error.error?.message === 'string') return error.error.message;
+    if (error.status === 401 || error.status === 403) return `${fallback} Not authorized (${error.status}).`;
+    if (error.status === 404) return `${fallback} Endpoint not found (404).`;
+    return `${fallback} Server returned ${error.status}.`;
   }
 }

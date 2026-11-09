@@ -1,1 +1,42 @@
-<p>product-card works!</p>
+@let p = product();
+
+<article class="card" [class.is-sold-out]="p.quantity <= 0">
+  <div class="media">
+    @if (showImage()) {
+      <img class="image" [src]="imageUrl()" alt="" loading="lazy" (error)="imageFailed.set(true)" />
+    } @else {
+      <div class="placeholder" aria-hidden="true">
+        <svg class="icon icon-large" viewBox="0 0 24 24">
+          <path d="M21 15l-5-5L5 21M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" />
+        </svg>
+      </div>
+    }
+
+    @if (stockLabel(); as label) {
+      <span class="stock">{{ label }}</span>
+    }
+
+    @if (showWishlist()) {
+      <button
+        type="button"
+        class="btn-wish"
+        [class.is-on]="wishlisted()"
+        [attr.aria-pressed]="wishlisted()"
+        [attr.aria-label]="(wishlisted() ? 'Remove ' : 'Add ') + p.name + (wishlisted() ? ' from wish list' : ' to wish list')"
+        (click)="wishlistToggle.emit(p.id)"
+      >
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+        </svg>
+      </button>
+    }
+  </div>
+
+  <div class="body">
+    <h3 class="name">
+      <a class="link" [routerLink]="['/products', p.id]">{{ p.name }}</a>
+    </h3>
+    <p class="description">{{ p.description }}</p>
+    <p class="price">{{ p.price | currency: currency() }}</p>
+  </div>
+</article>
