@@ -163,5 +163,17 @@ public class ProductService {
 
         return mongoTemplate.find(query, Product.class);
     }
+
+    public double getTotalProductsCount(ProductItem[] productItems) {
+        double total = 0;
+        for (ProductItem item : productItems) {
+        
+            Product product = productRepository.findById(item.productId())
+                    .orElseThrow(() -> new ProductNotFoundException(item.productId()));
+
+            total += product.getPrice() * item.quantity();
+        }
     
+        return total;
+    }
 }

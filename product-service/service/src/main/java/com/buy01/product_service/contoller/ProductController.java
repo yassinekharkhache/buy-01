@@ -77,4 +77,12 @@ public class ProductController {
         List<Product> products = productService.getMyProducts(userId);
         return ResponseEntity.ok(products);
     }
+
+    @PostMapping("/products/total")
+    public ResponseEntity<Double> getTotalProductsCount(
+            @RequestBody ProductItem[] productItems
+    ) {
+        double totalCount = productService.getTotalProductsCount(productItems);
+        return ResponseEntity.ok(totalCount);
+    }
 }

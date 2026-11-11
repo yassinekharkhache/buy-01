@@ -7,6 +7,9 @@
 // media service: 8802
 // media service db: 27019
 
+// order service 8803
+// order service db: 27020
+
 // eureka server: 8761
 
 // kafka server: 9092
