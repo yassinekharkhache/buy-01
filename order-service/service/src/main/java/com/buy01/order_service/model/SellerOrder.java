@@ -8,16 +8,27 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Document (collection = "product_sellers")
+@Document(collection = "seller_orders")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductSeller {
-    @Id 
+public class SellerOrder {
+
+    @Id
     private String id;
 
-    private String productId;
+    private String orderId;
 
     private String sellerId;
+
+    private ProductItem[] productItems;
+
+    private double totalPrice;
+
+    private OrderStatus status;
+
+    private long createdAt;
+
+    private long updatedAt;
 }

@@ -17,7 +17,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Sort;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import lombok.AllArgsConstructor;
 
 @Service
@@ -164,16 +171,67 @@ public class ProductService {
         return mongoTemplate.find(query, Product.class);
     }
 
-    public double getTotalProductsCount(ProductItem[] productItems) {
+    @Transactional
+    public OrderInfo getOrderInfo(ProductItem[] productItems) {
+
+        List<Product> products = productRepository.findAllByIdIn(
+            Arrays.stream(productItems)
+                .map(ProductItem::productId)
+                .toList()
+        );
+
+        Map<String, Product> productsMap = products.stream()
+            .collect(Collectors.toMap(
+                Product::getId,
+                Function.identity()
+            ));
+
+        Map<String, List<ProductItem>> sellerItems = new HashMap<>();
+
         double total = 0;
+
         for (ProductItem item : productItems) {
-        
-            Product product = productRepository.findById(item.productId())
-                    .orElseThrow(() -> new ProductNotFoundException(item.productId()));
+
+            Product product = productsMap.get(item.productId());
+
+            if (product == null) {
+                throw new ProductNotFoundException(item.productId());
+            }
+
+            if (product.getQuantity() < item.quantity()) {
+                throw new RuntimeException("Not enough quantity for product: " + product.getId());
+            }
+
+            product.setQuantity(product.getQuantity() - item.quantity());
 
             total += product.getPrice() * item.quantity();
+
+            sellerItems
+                .computeIfAbsent(product.getUserId(), k -> new ArrayList<>())
+                .add(item);
         }
-    
-        return total;
+
+        SellerProduct[] sellerProducts = sellerItems.entrySet()
+        .stream()
+        .map(entry -> {
+
+            String sellerId = entry.getKey();
+
+            List<ProductItem> items = entry.getValue();
+
+            double sellerTotal = items.stream()
+                .mapToDouble(item ->
+                    productsMap.get(item.productId()).getPrice() * item.quantity()
+                )
+                .sum();
+
+            return new SellerProduct(
+                sellerTotal,
+                sellerId,
+                items.toArray(ProductItem[]::new)
+            );
+        }).toArray(SellerProduct[]::new);
+
+        return new OrderInfo(sellerProducts, total);
     }
 }

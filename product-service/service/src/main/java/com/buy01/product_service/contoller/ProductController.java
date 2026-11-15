@@ -78,11 +78,11 @@ public class ProductController {
         return ResponseEntity.ok(products);
     }
 
-    @PostMapping("/products/total")
-    public ResponseEntity<Double> getTotalProductsCount(
+    @PostMapping("/products/order-info")
+    public ResponseEntity<OrderInfo> getOrderInfo(
             @RequestBody ProductItem[] productItems
     ) {
-        double totalCount = productService.getTotalProductsCount(productItems);
-        return ResponseEntity.ok(totalCount);
+        OrderInfo orderInfo = productService.getOrderInfo(productItems);
+        return ResponseEntity.ok(orderInfo);
     }
 }

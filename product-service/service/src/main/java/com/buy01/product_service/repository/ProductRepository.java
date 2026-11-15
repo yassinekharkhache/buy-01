@@ -34,6 +34,8 @@
 package com.buy01.product_service.repository;
 
 import com.buy01.product_service.model.*;
+
+import java.util.Collection;
 import java.util.List;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -44,5 +46,8 @@ public interface ProductRepository extends MongoRepository<Product, String> {
 
     // Find products by user
     List<Product> findByUserIdOrderByCreatedAtDesc(String userId);
+
+
+    List<Product> findAllByIdIn(Collection<String> ids);
 
 }
