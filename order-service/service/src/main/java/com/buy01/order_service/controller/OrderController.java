@@ -22,13 +22,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 
 @RestController 
-@RequestMapping ("/api/order")
+@RequestMapping ("/api/orders")
 @AllArgsConstructor 
 public class OrderController {
 
     private final OrderService orderService;
 
-    @PostMapping ("/")
+    @PostMapping
     public void createOrder(@RequestBody MakeOrderDto orderRequest, @AuthenticationPrincipal Jwt jwt) {
         String userId = jwt.getClaimAsString("userID");
         //get jwt token
@@ -45,7 +45,7 @@ public class OrderController {
 
     // get all orders for a user (Users Only)
     // using lastId
-    @GetMapping ("/")
+    @GetMapping
     public ResponseEntity<List<Order>> getUserOrders(
             @RequestParam(required = false) Long lastCreatedAt,
             @RequestParam(required = false) String lastId,

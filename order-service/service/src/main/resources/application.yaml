@@ -10,3 +10,6 @@ jwt:
 
 server:
   port: 8803
+
+gateway:
+  url: ${GATEWAY:http://localhost:8080}
