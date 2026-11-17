@@ -38,11 +38,11 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<Map<String, String>> registerUser(@Valid @RequestBody RegisterDto data) {
-        AuthService.saveUser(data);
+        String token = AuthService.saveUser(data);
 
         return ResponseEntity
                 .status(201)
-                .body(Map.of("created", data.name() + " registered successfully!"));
+                .body(Map.of("token", token));
     }
 
     @GetMapping("/me")

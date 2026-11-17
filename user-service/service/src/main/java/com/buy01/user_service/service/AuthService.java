@@ -26,7 +26,7 @@ public class AuthService {
     private final JwtService jwtService;
 
     @Transactional
-    public void saveUser(@Valid RegisterDto data) {
+    public String saveUser(@Valid RegisterDto data) {
         if (userRepository.existsByEmail(data.email().toLowerCase())) {
             throw new EmailAlreadyExistsException("Email '" + data.email().toLowerCase() + "' is already registered.");
         } else if (userRepository.existsByName(data.name())) {
@@ -41,7 +41,8 @@ public class AuthService {
         user.setPassword(encoder.encode(data.password()));
         user.setRole(data.role());
 
-        userRepository.save(user);
+        user = userRepository.save(user);
+        return jwtService.generateToken(user);
     }
 
     public String login(LoginDto data) {
