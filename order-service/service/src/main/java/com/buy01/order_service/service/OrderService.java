@@ -17,6 +17,8 @@ import com.buy01.order_service.dto.NextCursor;
 import com.buy01.order_service.dto.OrderInfo;
 import com.buy01.order_service.dto.OrderPage;
 import com.buy01.order_service.dto.OrderView;
+import com.buy01.order_service.dto.SellerOrderDetailsView;
+import com.buy01.order_service.dto.SellerOrderPage;
 import com.buy01.order_service.dto.SellerOrderView;
 import com.buy01.order_service.dto.SellerProduct;
 import com.buy01.order_service.model.Order;
@@ -82,15 +84,8 @@ public class OrderService {
     private static final int PAGE_SIZE = 5;
 
     public OrderPage getUserOrders(Long lastCreatedAt, String lastId, String userId) {
-        // cursor must come as a pair
-        if ((lastCreatedAt == null) != (lastId == null)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "lastCreatedAt and lastId must be sent together");
-        }
-
-        if (lastId != null && !ObjectId.isValid(lastId)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid lastId");
-        }
+        
+        validateCursor(lastCreatedAt, lastId);
 
         // fetch one extra row to know if another page exists
         List<Order> orders = orderRepository.findUserOrdersPage(userId, lastCreatedAt, lastId, PAGE_SIZE + 1);
@@ -138,5 +133,56 @@ public class OrderService {
                 s.getTotalPrice(),
                 List.of(s.getProductItems()),
                 s.getUpdatedAt());
+    }
+
+
+    // private void getSellerOrders(Long lastCreatedAt, String lastId, String userId,OrderStatus orderStatus){
+
+    // }
+
+    public SellerOrderPage getSellerOrders(
+        Long lastCreatedAt, String lastId, String sellerId, OrderStatus orderStatus) {
+
+        validateCursor(lastCreatedAt, lastId);
+
+        // fetch one extra row to know if another page exists
+        List<SellerOrder> orders = sellerOrderRepository
+                .findSellerOrdersPage(sellerId, orderStatus, lastCreatedAt, lastId, PAGE_SIZE + 1);
+
+        boolean hasMore = orders.size() > PAGE_SIZE;
+        if (hasMore) {
+            orders = orders.subList(0, PAGE_SIZE);
+        }
+        if (orders.isEmpty()) {
+            return new SellerOrderPage(List.of(), false, null);
+        }
+
+        List<SellerOrderDetailsView> views = orders.stream()
+                .map(s -> new SellerOrderDetailsView(
+                        s.getId(),
+                        s.getOrderId(),
+                        s.getStatus(),
+                        s.getTotalPrice(),
+                        List.of(s.getProductItems()),
+                        s.getCreatedAt(),
+                        s.getUpdatedAt()))
+                .toList();
+
+        SellerOrder last = orders.get(orders.size() - 1);
+        NextCursor nextCursor = hasMore
+                ? new NextCursor(last.getCreatedAt(), last.getId())
+                : null;
+
+        return new SellerOrderPage(views, hasMore, nextCursor);
+    }
+
+    private void validateCursor(Long lastCreatedAt, String lastId) {
+        if ((lastCreatedAt == null) != (lastId == null)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "lastCreatedAt and lastId must be sent together");
+        }
+        if (lastId != null && !ObjectId.isValid(lastId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid lastId");
+        }
     }
 }

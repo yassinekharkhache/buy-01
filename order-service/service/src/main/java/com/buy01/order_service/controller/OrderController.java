@@ -3,6 +3,7 @@ package com.buy01.order_service.controller;
 import com.buy01.order_service.dto.ChangeSellerOrderStatusDto;
 import com.buy01.order_service.dto.MakeOrderDto;
 import com.buy01.order_service.dto.OrderPage;
+import com.buy01.order_service.model.OrderStatus;
 import com.buy01.order_service.service.OrderService;
 
 import lombok.AllArgsConstructor;
@@ -61,11 +62,13 @@ public class OrderController {
 
     // getOrders Seller only
     @GetMapping("/seller")
-    public void ss(
+    public ResponseEntity<?> ss(
         @RequestParam(required = false) Long lastCreatedAt,
         @RequestParam(required = false) String lastId,
+        @RequestParam(required = true) OrderStatus orderStatus,
         @AuthenticationPrincipal Jwt jwt
     ){
-
+        String userId = jwt.getClaimAsString("userID");
+        return ResponseEntity.ok(orderService.getSellerOrders(lastCreatedAt, lastId, userId,orderStatus));
     }
 }
