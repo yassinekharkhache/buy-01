@@ -1,14 +1,23 @@
 package com.buy01.order_service.service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
+import org.bson.types.ObjectId;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.buy01.order_service.dto.ChangeSellerOrderStatusDto;
 import com.buy01.order_service.dto.MakeOrderDto;
+import com.buy01.order_service.dto.NextCursor;
 import com.buy01.order_service.dto.OrderInfo;
+import com.buy01.order_service.dto.OrderPage;
+import com.buy01.order_service.dto.OrderView;
+import com.buy01.order_service.dto.SellerOrderView;
 import com.buy01.order_service.dto.SellerProduct;
 import com.buy01.order_service.model.Order;
 import com.buy01.order_service.model.OrderStatus;
@@ -46,7 +55,6 @@ public class OrderService {
             sellerOrder.setStatus(OrderStatus.CREATED);
             sellerOrder.setTotalPrice(sellerProduct.totalPrice());
             sellerOrder.setUpdatedAt(now);
-            // save
             sellerOrderRepository.save(sellerOrder);
         }
     }
@@ -63,18 +71,72 @@ public class OrderService {
     public void changeOrderStatus(ChangeSellerOrderStatusDto orderRequest, String sellerId) {
         SellerOrder sellerOrder = sellerOrderRepository.findById(orderRequest.orderId())
                 .orElseThrow(() -> new RuntimeException("Seller order not found"));
+        if(!sellerOrder.getSellerId().equals(sellerId)){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your order");
+        }
         sellerOrder.setStatus(orderRequest.newStatus());
         sellerOrder.setUpdatedAt(System.currentTimeMillis());
         sellerOrderRepository.save(sellerOrder);
     }
 
-    public List<Order> getUserOrders(Long lastCreatedAt, String lastId,String userId) {
-        if (lastCreatedAt != null && lastId != null) {
-            return orderRepository.findByUserIdAndCreatedAtLessThanAndIdLessThanOrderByCreatedAtDesc(
-                    userId, lastCreatedAt, lastId);
-        } else {
-            return orderRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    private static final int PAGE_SIZE = 5;
+
+    public OrderPage getUserOrders(Long lastCreatedAt, String lastId, String userId) {
+        // cursor must come as a pair
+        if ((lastCreatedAt == null) != (lastId == null)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "lastCreatedAt and lastId must be sent together");
         }
+
+        if (lastId != null && !ObjectId.isValid(lastId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid lastId");
+        }
+
+        // fetch one extra row to know if another page exists
+        List<Order> orders = orderRepository.findUserOrdersPage(userId, lastCreatedAt, lastId, PAGE_SIZE + 1);
+
+        boolean hasMore = orders.size() > PAGE_SIZE;
+        if (hasMore) {
+            orders = orders.subList(0, PAGE_SIZE);
+        }
+
+        if (orders.isEmpty()) {
+            return new OrderPage(List.of(), false, null);
+        }
+
+        // one query for all seller orders of this page (no N+1)
+        List<String> orderIds = orders.stream().map(Order::getId).toList();
+
+        Map<String, List<SellerOrderView>> sellerOrdersByOrderId = sellerOrderRepository
+                .findByOrderIdIn(orderIds).stream()
+                .collect(Collectors.groupingBy(
+                        SellerOrder::getOrderId,
+                        Collectors.mapping(this::toSellerOrderView, Collectors.toList())));
+
+        List<OrderView> views = orders.stream()
+                .map(order -> new OrderView(
+                        order.getId(),
+                        order.getTotalPrice(),
+                        order.getCreatedAt(),
+                        order.getUpdatedAt(),
+                        sellerOrdersByOrderId.getOrDefault(order.getId(), List.of())))
+                .toList();
+
+        Order last = orders.get(orders.size() - 1);
+        NextCursor nextCursor = hasMore
+                ? new NextCursor(last.getCreatedAt(), last.getId())
+                : null;
+
+        return new OrderPage(views, hasMore, nextCursor);
     }
 
+    private SellerOrderView toSellerOrderView(SellerOrder s) {
+        return new SellerOrderView(
+                s.getId(),
+                s.getSellerId(),
+                s.getStatus(),
+                s.getTotalPrice(),
+                List.of(s.getProductItems()),
+                s.getUpdatedAt());
+    }
 }
