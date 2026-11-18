@@ -1,5 +1,7 @@
 package com.buy01.user_service.controller;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,17 +25,19 @@ public class CardController {
     private final CardService cardService;
 
     @PostMapping("/{productId}")
-    public void addProductToCart(@PathVariable String productId, @AuthenticationPrincipal User user) {
+    public ResponseEntity<?> addProductToCart(@PathVariable String productId, @AuthenticationPrincipal User user) {
         cardService.addProductToCart(user.getId(), productId);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @GetMapping
-    public ShoppringCart getCartByUserId(@AuthenticationPrincipal User user) {
-        return cardService.getCartByUserId(user.getId());
+    public ResponseEntity<ShoppringCart> getCartByUserId(@AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(cardService.getCartByUserId(user.getId()));
     }
 
     @DeleteMapping("/{productId}")
-    public void deleteProductFromCart(@PathVariable String productId, @AuthenticationPrincipal User user) {
+    public ResponseEntity<?> deleteProductFromCart(@PathVariable String productId, @AuthenticationPrincipal User user) {
         cardService.deleteProductFromCart(user.getId(), productId);
+        return ResponseEntity.noContent().build();
     }
 }

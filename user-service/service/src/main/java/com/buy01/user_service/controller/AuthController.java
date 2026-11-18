@@ -41,7 +41,7 @@ public class AuthController {
         String token = AuthService.saveUser(data);
 
         return ResponseEntity
-                .status(201)
+                .status(HttpStatus.CREATED)
                 .body(Map.of("token", token));
     }
 

@@ -2,6 +2,7 @@ package com.buy01.user_service.controller;
 
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -28,14 +29,14 @@ public class WishListController {
     public ResponseEntity<String> addToWishList(@PathVariable String productId, @AuthenticationPrincipal User user) {
         WishListDto data = new WishListDto(user.getId(), productId);
         wishListService.addToWishList(data);
-        return ResponseEntity.ok("Product added to wishlist successfully");
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @DeleteMapping("/{productId}")
     public ResponseEntity<String> deleteFromWishList(@PathVariable String productId, @AuthenticationPrincipal User user) {
         WishListDto data = new WishListDto(user.getId(), productId);
         wishListService.deleteFromWishList(data);
-        return ResponseEntity.ok("Product removed from wishlist successfully");
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
     @GetMapping

@@ -1,6 +1,9 @@
 package com.buy01.user_service.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
 import org.springframework.stereotype.Service;
 
 import com.buy01.user_service.model.ShoppringCart;
@@ -11,7 +14,7 @@ import lombok.AllArgsConstructor;
 @Service 
 @AllArgsConstructor
 public class CardService {
-    @Autowired
+
     private final CartRepository cartRepository;
 
     public ShoppringCart getCartByUserId(String userId) {
@@ -19,34 +22,45 @@ public class CardService {
     }
 
     public void addProductToCart(String userId, String productId) {
+
         ShoppringCart cart = cartRepository.findByUserId(userId);
+
         if (cart == null) {
             cart = new ShoppringCart();
             cart.setUserId(userId);
-            cart.setProductIds(new String[] { productId });
+            cart.setProductIds(new String[]{productId});
         } else {
-            String[] productIds = cart.getProductIds();
-            String[] newProductIds = new String[productIds.length + 1];
-            System.arraycopy(productIds, 0, newProductIds, 0, productIds.length);
-            newProductIds[productIds.length] = productId;
-            cart.setProductIds(newProductIds);
+            List<String> productIds = new ArrayList<>(
+                cart.getProductIds() == null
+                    ? List.of()
+                    : List.of(cart.getProductIds())
+            );
+
+            if (!productIds.contains(productId)) {
+                productIds.add(productId);
+            }
+
+            cart.setProductIds(productIds.toArray(new String[0]));
         }
+
         cartRepository.save(cart);
     }
 
     public void deleteProductFromCart(String userId, String productId) {
         ShoppringCart cart = cartRepository.findByUserId(userId);
-        if (cart != null) {
-            String[] productIds = cart.getProductIds();
-            String[] newProductIds = new String[productIds.length - 1];
-            int index = 0;
-            for (String id : productIds) {
-                if (!id.equals(productId)) {
-                    newProductIds[index++] = id;
-                }
-            }
-            cart.setProductIds(newProductIds);
-            cartRepository.save(cart);
+
+        if (cart == null || cart.getProductIds() == null) {
+            return;
         }
+
+        List<String> productIds = new ArrayList<>(
+            List.of(cart.getProductIds())
+        );
+
+        productIds.removeIf(id -> Objects.equals(id, productId));
+
+        cart.setProductIds(productIds.toArray(new String[0]));
+
+        cartRepository.save(cart);
     }
 }
