@@ -62,7 +62,7 @@ public class OrderController {
 
     // getOrders Seller only
     @GetMapping("/seller")
-    public ResponseEntity<?> ss(
+    public ResponseEntity<?> getSellerOrders(
         @RequestParam(required = false) Long lastCreatedAt,
         @RequestParam(required = false) String lastId,
         @RequestParam(required = true) OrderStatus orderStatus,

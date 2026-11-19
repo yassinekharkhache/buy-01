@@ -28,6 +28,8 @@ public class SellerOrder {
 
     private OrderStatus status;
 
+    private String sellerNote;
+
     private long createdAt;
 
     private long updatedAt;

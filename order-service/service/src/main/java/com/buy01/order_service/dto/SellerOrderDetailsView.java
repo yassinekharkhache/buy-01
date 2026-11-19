@@ -11,6 +11,7 @@ public record SellerOrderDetailsView(
         OrderStatus status,
         double totalPrice,
         List<ProductItem> productItems,
+        String sellerNote,
         long createdAt,
         long updatedAt
 ) {}

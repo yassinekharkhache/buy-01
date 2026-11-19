@@ -54,7 +54,7 @@ public class OrderService {
             sellerOrder.setOrderId(order.getId());
             sellerOrder.setProductItems(sellerProduct.productItems());
             sellerOrder.setSellerId(sellerProduct.sellerId());
-            sellerOrder.setStatus(OrderStatus.CREATED);
+            sellerOrder.setStatus(OrderStatus.PENDING);
             sellerOrder.setTotalPrice(sellerProduct.totalPrice());
             sellerOrder.setUpdatedAt(now);
             sellerOrderRepository.save(sellerOrder);
@@ -76,6 +76,13 @@ public class OrderService {
         if(!sellerOrder.getSellerId().equals(sellerId)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your order");
         }
+        // if(!orderRequest.sellerNote().equals(null)){
+        //     Order order = orderRepository.findById(orderRequest.orderId()).orElseThrow(
+
+        //     );
+        //     orderRepository.save(order);
+        // }
+        sellerOrder.setSellerNote(orderRequest.sellerNote());
         sellerOrder.setStatus(orderRequest.newStatus());
         sellerOrder.setUpdatedAt(System.currentTimeMillis());
         sellerOrderRepository.save(sellerOrder);
@@ -84,7 +91,6 @@ public class OrderService {
     private static final int PAGE_SIZE = 5;
 
     public OrderPage getUserOrders(Long lastCreatedAt, String lastId, String userId) {
-        
         validateCursor(lastCreatedAt, lastId);
 
         // fetch one extra row to know if another page exists
@@ -136,12 +142,7 @@ public class OrderService {
     }
 
 
-    // private void getSellerOrders(Long lastCreatedAt, String lastId, String userId,OrderStatus orderStatus){
-
-    // }
-
-    public SellerOrderPage getSellerOrders(
-        Long lastCreatedAt, String lastId, String sellerId, OrderStatus orderStatus) {
+    public SellerOrderPage getSellerOrders(Long lastCreatedAt, String lastId, String sellerId, OrderStatus orderStatus) {
 
         validateCursor(lastCreatedAt, lastId);
 
@@ -164,6 +165,7 @@ public class OrderService {
                         s.getStatus(),
                         s.getTotalPrice(),
                         List.of(s.getProductItems()),
+                        s.getSellerNote(),
                         s.getCreatedAt(),
                         s.getUpdatedAt()))
                 .toList();

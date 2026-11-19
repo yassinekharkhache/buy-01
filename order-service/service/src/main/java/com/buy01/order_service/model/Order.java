@@ -25,4 +25,5 @@ public class Order {
     private long createdAt;
 
     private long updatedAt;
+
 }
