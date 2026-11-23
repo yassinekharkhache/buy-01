@@ -130,7 +130,7 @@ public class OrderService {
                 s.getId(),
                 s.getSellerId(),
                 s.getStatus(),
-                s.getSellerId(),
+                s.getSellerNote(),
                 s.getTotalPrice(),
                 List.of(s.getProductItems()),
                 s.getUpdatedAt());
