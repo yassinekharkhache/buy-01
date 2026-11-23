@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.buy01.order_service.dto.AddOrderNoteDto;
 import com.buy01.order_service.dto.ChangeSellerOrderStatusDto;
 import com.buy01.order_service.dto.MakeOrderDto;
 import com.buy01.order_service.dto.NextCursor;
@@ -76,13 +77,6 @@ public class OrderService {
         if(!sellerOrder.getSellerId().equals(sellerId)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your order");
         }
-        // if(!orderRequest.sellerNote().equals(null)){
-        //     Order order = orderRepository.findById(orderRequest.orderId()).orElseThrow(
-
-        //     );
-        //     orderRepository.save(order);
-        // }
-        sellerOrder.setSellerNote(orderRequest.sellerNote());
         sellerOrder.setStatus(orderRequest.newStatus());
         sellerOrder.setUpdatedAt(System.currentTimeMillis());
         sellerOrderRepository.save(sellerOrder);
@@ -136,6 +130,7 @@ public class OrderService {
                 s.getId(),
                 s.getSellerId(),
                 s.getStatus(),
+                s.getSellerId(),
                 s.getTotalPrice(),
                 List.of(s.getProductItems()),
                 s.getUpdatedAt());
@@ -186,5 +181,15 @@ public class OrderService {
         if (lastId != null && !ObjectId.isValid(lastId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid lastId");
         }
+    }
+
+    public void addOrderNote(String orderId,AddOrderNoteDto addOrderNoteDto, String sellerId){
+        SellerOrder sellerOrder = sellerOrderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Seller order not found"));
+        if(!sellerOrder.getSellerId().equals(sellerId)){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your order");
+        }
+        sellerOrder.setSellerNote(addOrderNoteDto.note());
+        sellerOrderRepository.save(sellerOrder);
     }
 }

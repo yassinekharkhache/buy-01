@@ -10,6 +10,7 @@ public record SellerOrderView(
         String id,
         String sellerId,
         OrderStatus status,
+        String note,
         double totalPrice,
         List<ProductItem> productItems,
         long updatedAt

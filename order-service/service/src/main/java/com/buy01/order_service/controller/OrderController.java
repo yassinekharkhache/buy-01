@@ -1,5 +1,6 @@
 package com.buy01.order_service.controller;
 
+import com.buy01.order_service.dto.AddOrderNoteDto;
 import com.buy01.order_service.dto.ChangeSellerOrderStatusDto;
 import com.buy01.order_service.dto.MakeOrderDto;
 import com.buy01.order_service.dto.OrderPage;
@@ -13,6 +14,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -70,5 +72,19 @@ public class OrderController {
     ){
         String userId = jwt.getClaimAsString("userID");
         return ResponseEntity.ok(orderService.getSellerOrders(lastCreatedAt, lastId, userId,orderStatus));
+    }
+    
+    // Add or update a note for an order (Seller Only)
+    @PatchMapping("/{orderId}/note")
+    public ResponseEntity<Void> addOrderNote(
+            @PathVariable String orderId,
+            @RequestBody AddOrderNoteDto noteRequest,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        String userId = jwt.getClaimAsString("userID");
+
+        orderService.addOrderNote(orderId, noteRequest, userId);
+
+        return ResponseEntity.noContent().build();
     }
 }
