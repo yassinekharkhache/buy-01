@@ -203,9 +203,10 @@ public class ProductService {
             }
 
             product.setQuantity(product.getQuantity() - item.quantity());
-
+            productRepository.save(product);
+            
             total += product.getPrice() * item.quantity();
-
+            
             sellerItems
                 .computeIfAbsent(product.getUserId(), k -> new ArrayList<>())
                 .add(item);
